@@ -5,11 +5,6 @@ import subprocess
 import sys
 import time
 
-# TODO: Do a complete pass through the program to add appropriate logging.
-
-# TODO: externalize configuration into config file or, if few enough args, as
-# command-line args
-
 LOCAL_POOL_NAME = "tank"
 BACKUP_POOL_NAME = "backup_portable"
 
