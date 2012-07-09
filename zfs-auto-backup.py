@@ -77,19 +77,22 @@ def doBackup():
     else:
         # Get the latest remote snapshot.      
         latest_remote_snap = remote_snaps[-1].split("@")[1]
+        
+        # If the backup already has the latest snapshot
+        if latest_remote_snap == latest_local_snap:
+            log("Nothing to do.  Backup pool already has latest snapshot '" + latest_remote_snap + "'.")
+        
+        # Backup pool does not have the latest local snapshot
+        else:
+            # Log that we are starting incremental backup
+            log("Starting incremental backup from '" + latest_remote_snap
+                    + "' to '" + latest_local_snap + "'.")
 
-        # Log that we are starting incremental backup
-        log("Starting incremental backup from '" + latest_remote_snap
-                + "' to '" + latest_local_snap + "'.")
-
-        # TODO need some logic here for if the latest remote snap
-        # is the same as the latest local snap
-
-        # Construct and execute command to send incremental backup
-        cmd = "zfs send -vR -I " + LOCAL_POOL_NAME + "@" + latest_remote_snap +
-                " " + LOCAL_POOL_NAME + "@" + latest_local_snap +
-                " | zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
-        exec_in_shell(cmd)
+            # Construct and execute command to send incremental backup
+            cmd = "zfs send -vR -I " + LOCAL_POOL_NAME + "@" + latest_remote_snap +
+                    " " + LOCAL_POOL_NAME + "@" + latest_local_snap +
+                    " | zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
+            exec_in_shell(cmd)
 
 def exec_in_shell(cmd):
     return subprocess.check_output(cmd, shell=True)
