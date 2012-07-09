@@ -34,6 +34,11 @@ def main():
         # Start the backup.
         else:
             doBackup()
+            export_pool()
+
+# Export the pool.
+def export_pool():
+    exec_in_shell("zpool export " + BACKUP_POOL_NAME)
 
 # Execute the command in the shell and get the output.
 # Find and return all occurrences of the search string in the output.
