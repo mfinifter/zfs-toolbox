@@ -81,6 +81,10 @@ def doBackup():
         # Log that we are starting incremental backup
         log("Starting incremental backup from '" + latest_remote_snap
                 + "' to '" + latest_local_snap + "'.")
+
+        # TODO need some logic here for if the latest remote snap
+        # is the same as the latest local snap
+
         # Construct and execute command to send incremental backup
         cmd = "zfs send -vR -I " + LOCAL_POOL_NAME + "@" + latest_remote_snap +
                 " " + LOCAL_POOL_NAME + "@" + latest_local_snap +
