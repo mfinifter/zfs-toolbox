@@ -5,8 +5,8 @@ import subprocess
 import sys
 import time
 
-LOCAL_POOL_NAME = "tank"
-BACKUP_POOL_NAME = "backup_portable"
+LOCAL_POOL_NAME = "fishtank"
+BACKUP_POOL_NAME = "backup_green"
 
 # Find out whether the specified backup drive is attached.
 # If it is, do backups to it, incremental where possible.
@@ -64,7 +64,7 @@ def doBackup():
         log("Starting non-incremental backup.")
 
         # Execute a non-incremental backup.
-        cmd = "zfs send -vR " + LOCAL_POOL_NAME + "@" + latest_local_snap +
+        cmd = "zfs send -vR " + LOCAL_POOL_NAME + "@" + latest_local_snap + \
                 " | zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
         exec_in_shell(cmd)
     
@@ -84,8 +84,8 @@ def doBackup():
                     + "' to '" + latest_local_snap + "'.")
 
             # Construct and execute command to send incremental backup
-            cmd = "zfs send -vR -I " + LOCAL_POOL_NAME + "@" + latest_remote_snap +
-                    " " + LOCAL_POOL_NAME + "@" + latest_local_snap +
+            cmd = "zfs send -vR -I " + LOCAL_POOL_NAME + "@" + latest_remote_snap + \
+                    " " + LOCAL_POOL_NAME + "@" + latest_local_snap + \
                     " | zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
             exec_in_shell(cmd)
 
