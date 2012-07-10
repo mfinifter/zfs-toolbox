@@ -16,20 +16,21 @@ def main():
     if not cmd_output_matches("zpool import", "pool: " + BACKUP_POOL_NAME):
         log("'" + BACKUP_POOL_NAME + "' is not available")
 
+        # Maybe it has already been imported?
+        if cmd_output_matches("zpool status", "pool: " + BACKUP_POOL_NAME):
+            do_backup()
+
     # The pool is eligible to be imported.
     else:
         # Try to import the pool.
-        # If the pool fails to import
+        # If the pool fails to import, log and do nothing else.
         if cmd_output_matches("zpool import -N " + BACKUP_POOL_NAME, "cannot import"):
-            
-            # Log the failure and exit
             log("Failed to import pool '" + BACKUP_POOL_NAME + "'.")
             
         # We have successfully imported the pool.
         # Start the backup.
         else:
-            doBackup()
-            export_pool()
+            do_backup()
 
 # Export the pool.
 def export_pool():
@@ -48,7 +49,7 @@ def log(msg):
 
 # Pre: The backup pool has been imported.
 # Do a backup of the pool
-def doBackup():
+def do_backup():
     # Find out the latest local snapshot.
     local_snaps = cmd_output_matches("zfs list -r -t snapshot " + LOCAL_POOL_NAME,
             "^" + LOCAL_POOL_NAME + r"@\S*")
@@ -88,9 +89,15 @@ def doBackup():
                     " " + LOCAL_POOL_NAME + "@" + latest_local_snap + \
                     " | zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
             exec_in_shell(cmd)
+    export_pool()
 
 def exec_in_shell(cmd):
-    return subprocess.check_output(cmd, shell=True)
+    try:
+        return subprocess.check_output(cmd.split(), shell=True)
+    except subprocess.CalledProcessError, e:
+        print "fail: " + e.output
+        sys.exit()
+
 
 if __name__ == '__main__':
     main()
