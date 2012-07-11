@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 
-SETTINGS_LOCATION = '/etc/zfs-auto-backup.conf'
+SETTINGS_LOCATION = '/etc/zfs/zfs-auto-backup.conf'
 
 # Find out whether the specified backup drive is attached.
 # If it is, do backups to it, incremental where possible.
