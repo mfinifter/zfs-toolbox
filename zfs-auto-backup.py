@@ -82,9 +82,9 @@ def do_backup():
         log("Starting non-incremental backup.")
 
         # Execute a non-incremental backup.
-        cmd = "/sbin/zfs send -vR " + LOCAL_POOL_NAME + "@" + latest_local_snap + \
-                " | /sbin/zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
-        exec_in_shell(cmd)
+        cmd1 = "/sbin/zfs send -vR " + LOCAL_POOL_NAME + "@" + latest_local_snap
+        cmd2 = "/sbin/zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
+        exec_pipe(cmd1, cmd2)
     
     # There are remote snapshots.
     else:
@@ -102,10 +102,10 @@ def do_backup():
                     + "' to '" + latest_local_snap + "'.")
 
             # Construct and execute command to send incremental backup
-            cmd = "/sbin/zfs send -vR -I " + LOCAL_POOL_NAME + "@" + latest_remote_snap + \
-                    " " + LOCAL_POOL_NAME + "@" + latest_local_snap + \
-                    " | /sbin/zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
-            exec_in_shell(cmd)
+            cmd1 = "/sbin/zfs send -vR -I " + LOCAL_POOL_NAME + "@" + latest_remote_snap + \
+                    " " + LOCAL_POOL_NAME + "@" + latest_local_snap
+            cmd2 = "/sbin/zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
+            exec_pipe(cmd1, cmd2)
     export_pool()
 
 def exec_in_shell(cmd):
@@ -116,6 +116,11 @@ def exec_in_shell(cmd):
         print "fail error: " + e.output
         sys.exit()
 
+def exec_pipe(cmd1, cmd2):
+    p1 = subprocess.Popen(cmd1.split(), stdout=subprocess.PIPE)
+    p2 = subprocess.Popen(cmd2.split(), stdin=p1.stdout)
+    p1.stdout.close()
+    p2.communicate()
 
 if __name__ == '__main__':
     main()
