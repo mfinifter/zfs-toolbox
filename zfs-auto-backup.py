@@ -11,26 +11,37 @@ import subprocess
 import sys
 import time
 
-LOCAL_POOL_NAME = "fishtank"
-BACKUP_POOL_NAME = "backup_green"
+SETTINGS_LOCATION = '/etc/zfs-auto-backup.conf'
 
 # Find out whether the specified backup drive is attached.
 # If it is, do backups to it, incremental where possible.
 def main():
 
+    # Load settings
+    global LOCAL_POOL_NAME, BACKUP_POOL_NAME
+    settings = {}
+    with open(SETTINGS_LOCATION, 'r') as settings_file:
+        for line in settings_file:
+            line_split = line.strip().split('=')
+            settings[line_split[0]] = line_split[1]
+        LOCAL_POOL_NAME = settings['local_pool_name']
+        BACKUP_POOL_NAME = settings['backup_pool_name']
+    # TODO: fail safely when the settings file is in the wrong format or can't
+    # be found
+
     # If the pool is ineligible to be imported
-    if not cmd_output_matches("zpool import", "pool: " + BACKUP_POOL_NAME):
+    if not cmd_output_matches("/sbin/zpool import", "pool: " + BACKUP_POOL_NAME):
         log("'" + BACKUP_POOL_NAME + "' is not available")
 
         # Maybe it has already been imported?
-        if cmd_output_matches("zpool status", "pool: " + BACKUP_POOL_NAME):
+        if cmd_output_matches("/sbin/zpool status", "pool: " + BACKUP_POOL_NAME):
             do_backup()
 
     # The pool is eligible to be imported.
     else:
         # Try to import the pool.
         # If the pool fails to import, log and do nothing else.
-        if cmd_output_matches("zpool import -N " + BACKUP_POOL_NAME, "cannot import"):
+        if cmd_output_matches("/sbin/zpool import -N " + BACKUP_POOL_NAME, "cannot import"):
             log("Failed to import pool '" + BACKUP_POOL_NAME + "'.")
             
         # We have successfully imported the pool.
@@ -40,7 +51,7 @@ def main():
 
 # Export the pool.
 def export_pool():
-    exec_in_shell("zpool export " + BACKUP_POOL_NAME)
+    exec_in_shell("/sbin/zpool export " + BACKUP_POOL_NAME)
 
 # Execute the command in the shell and get the output.
 # Find and return all occurrences of the search string in the output.
@@ -57,12 +68,12 @@ def log(msg):
 # Do a backup of the pool
 def do_backup():
     # Find out the latest local snapshot.
-    local_snaps = cmd_output_matches("zfs list -r -t snapshot " + LOCAL_POOL_NAME,
+    local_snaps = cmd_output_matches("/sbin/zfs list -r -t snapshot " + LOCAL_POOL_NAME,
             "^" + LOCAL_POOL_NAME + r"@\S*")
     latest_local_snap = local_snaps[-1].split("@")[1]
 
     # Find remote snapshots.
-    remote_snaps = cmd_output_matches("zfs list -r -t snapshot " + BACKUP_POOL_NAME,
+    remote_snaps = cmd_output_matches("/sbin/zfs list -r -t snapshot " + BACKUP_POOL_NAME,
             "^" + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME + r"@\S*")
 
     # If there are no remote snapshots, do a non-incremental backup.
@@ -71,8 +82,8 @@ def do_backup():
         log("Starting non-incremental backup.")
 
         # Execute a non-incremental backup.
-        cmd = "zfs send -vR " + LOCAL_POOL_NAME + "@" + latest_local_snap + \
-                " | zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
+        cmd = "/sbin/zfs send -vR " + LOCAL_POOL_NAME + "@" + latest_local_snap + \
+                " | /sbin/zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
         exec_in_shell(cmd)
     
     # There are remote snapshots.
@@ -91,15 +102,15 @@ def do_backup():
                     + "' to '" + latest_local_snap + "'.")
 
             # Construct and execute command to send incremental backup
-            cmd = "zfs send -vR -I " + LOCAL_POOL_NAME + "@" + latest_remote_snap + \
+            cmd = "/sbin/zfs send -vR -I " + LOCAL_POOL_NAME + "@" + latest_remote_snap + \
                     " " + LOCAL_POOL_NAME + "@" + latest_local_snap + \
-                    " | zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
+                    " | /sbin/zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
             exec_in_shell(cmd)
     export_pool()
 
 def exec_in_shell(cmd):
     try:
-        return subprocess.check_output(cmd.split(), shell=True)
+        return subprocess.check_output(cmd.split())
     except subprocess.CalledProcessError, e:
         print "fail: " + e.output
         sys.exit()
