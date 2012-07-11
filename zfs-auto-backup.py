@@ -62,7 +62,7 @@ def cmd_output_matches(cmd, string_to_match):
 
 # Print a timestamped log message.
 def log(msg):
-    print int(time.time()) + ": " + msg
+    print str(int(time.time())) + ": " + msg
 
 # Pre: The backup pool has been imported.
 # Do a backup of the pool
@@ -112,7 +112,8 @@ def exec_in_shell(cmd):
     try:
         return subprocess.check_output(cmd.split())
     except subprocess.CalledProcessError, e:
-        print "fail: " + e.output
+        print "failed on command: " + cmd
+        print "fail error: " + e.output
         sys.exit()
 
 
