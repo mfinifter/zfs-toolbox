@@ -81,6 +81,16 @@ def do_backup():
         # Log the fact that we are doing a non-incremental backup
         log("Starting non-incremental backup.")
 
+        # If the backup filesystem does not exist in the backup pool, create the
+        # dataset to backup to in the backup pool
+        backup_fs = cmd_output_matches("/sbin/zfs list " + BACKUP_POOL_NAME,
+            "^" + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME)
+        if not backup_fs:
+            # Create the backup filesystem
+            print "Could not find the backup filesystem. Creating."
+            exec_in_shell("/sbin/zfs create " + BACKUP_POOL_NAME + "/" +
+                LOCAL_POOL_NAME)
+
         # Execute a non-incremental backup.
         cmd1 = "/sbin/zfs send -vR " + LOCAL_POOL_NAME + "@" + latest_local_snap
         cmd2 = "/sbin/zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME
