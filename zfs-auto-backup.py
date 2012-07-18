@@ -68,13 +68,11 @@ def log(msg):
 # Do a backup of the pool
 def do_backup():
     # Find out the latest local snapshot.
-    local_snaps = cmd_output_matches("/sbin/zfs list -r -t snapshot " + LOCAL_POOL_NAME,
-            "^" + LOCAL_POOL_NAME + r"@\S*")
-    latest_local_snap = local_snaps[-1].split("@")[1]
+    local_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + LOCAL_POOL_NAME)
+    latest_local_snap = local_snaps.split("\n")[0].split("@")[1]
 
     # Find remote snapshots.
-    remote_snaps = cmd_output_matches("/sbin/zfs list -r -t snapshot " + BACKUP_POOL_NAME,
-            "^" + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME + r"@\S*")
+    remote_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME)
 
     # If there are no remote snapshots, do a non-incremental backup.
     if not remote_snaps:
@@ -99,7 +97,7 @@ def do_backup():
     # There are remote snapshots.
     else:
         # Get the latest remote snapshot.      
-        latest_remote_snap = remote_snaps[-1].split("@")[1]
+        latest_remote_snap = remote_snaps.split("\n")[0].split("@")[1]
         
         # If the backup already has the latest snapshot
         if latest_remote_snap == latest_local_snap:
@@ -128,9 +126,11 @@ def exec_in_shell(cmd):
 
 def exec_pipe(cmd1, cmd2):
     p1 = subprocess.Popen(cmd1.split(), stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(cmd2.split(), stdin=p1.stdout)
+    p2 = subprocess.Popen(cmd2.split(), stdin=p1.stdout, stdout=subprocess.PIPE)
     p1.stdout.close()
-    p2.communicate()
+    out, err = p2.communicate()
+
+    return out 
 
 if __name__ == '__main__':
     main()
