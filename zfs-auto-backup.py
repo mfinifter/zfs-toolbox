@@ -49,6 +49,15 @@ def main():
         else:
             do_backup(LOCAL_POOL_NAME)
 
+# Check if the given dataset exists
+def dataset_exists(dataset):
+    matches = cmd_output_matches("/sbin/zfs list -H -o name", "^" + dataset + "$")
+    return len(matches) > 0
+
+# Create the given filesystem
+def create_filesystem(fs):
+    exec_in_shell("/sbin/zfs create " + fs)
+
 # Export the pool.
 def export_pool():
     exec_in_shell("/sbin/zpool export " + BACKUP_POOL_NAME)
@@ -67,20 +76,26 @@ def log(msg):
 # Pre: The backup pool has been imported.
 # Do a backup of the pool
 def do_backup(local_dataset):
-    # Find out the latest local snapshot.
+    # Find out the latest local snapshot. We start at the last hourly.
+    #local_snaps = cmd_output_matches("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + local_dataset, ".*@zfs-auto-snap_hourly.*")
+    #latest_local_snap = local_snaps[0].split("@")[1]
     local_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + local_dataset)
     latest_local_snap = local_snaps.split("\n")[0].split("@")[1]
 
+    backup_destination = BACKUP_POOL_NAME + "/" + local_dataset
+
+    # Make sure the destination dataset exists. If it doesn't, create it.
+    if (not dataset_exists(backup_destination)):
+        create_filesystem(backup_destination)
+
     # Find remote snapshots.
-    remote_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + BACKUP_POOL_NAME + "/" + local_dataset)
+    #remote_snaps = cmd_output_matches("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + backup_destination, ".*@zfs-auto-snap_hourly.*")
+    remote_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + backup_destination)
 
     # If there are no remote snapshots, do a non-incremental backup.
     if not remote_snaps:
         # Log the fact that we are doing a non-incremental backup
         log("Starting non-incremental backup.")
-
-        # For now, we assume that the base filesystem for the backup has already
-        # been created.
 
         # If the backup filesystem does not exist in the backup pool, create the
         # dataset to backup to in the backup pool
@@ -100,6 +115,7 @@ def do_backup(local_dataset):
     # There are remote snapshots.
     else:
         # Get the latest remote snapshot.      
+        #latest_remote_snap = remote_snaps[0].split("@")[1]
         latest_remote_snap = remote_snaps.split("\n")[0].split("@")[1]
         
         # If the backup already has the latest snapshot
