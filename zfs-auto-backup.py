@@ -11,44 +11,70 @@ import subprocess
 import sys
 import time
 
-SETTINGS_LOCATION = '/etc/zfs/zfs-auto-backup.conf'
 
-# Find out whether the specified backup drive is attached.
-# If it is, do backups to it, incremental where possible.
+# Backup each pool (or don't) according to the value of its
+# "zfs-auto-backup:backup-pools" property
 def main():
+    list_of_pools = get_list_of_pools()
+    for pool in list_of_pools:
+        backup_pools = get_backup_pools(pool)
+        for backup_pool in backup_pools:
+            # If the pool is ineligible to be imported
+            if not cmd_output_matches("/sbin/zpool import",
+                    "pool: " + backup_pool):
+                log("'" + backup_pool + "' is not available")
 
-    # Load settings
-    global LOCAL_POOL_NAME, BACKUP_POOL_NAME
-    settings = {}
-    with open(SETTINGS_LOCATION, 'r') as settings_file:
-        for line in settings_file:
-            line_split = line.strip().split('=')
-            settings[line_split[0]] = line_split[1]
-        LOCAL_POOL_NAME = settings['local_pool_name']
-        BACKUP_POOL_NAME = settings['backup_pool_name']
-    # TODO: fail safely when the settings file is in the wrong format or can't
-    # be found
+                # Maybe it has already been imported?
+                if cmd_output_matches("/sbin/zpool status",
+                        "pool: " + backup_pool):
+                    do_backup(pool, backup_pool)
 
-    # If the pool is ineligible to be imported
-    if not cmd_output_matches("/sbin/zpool import", "pool: " + BACKUP_POOL_NAME):
-        log("'" + BACKUP_POOL_NAME + "' is not available")
+            # The pool is eligible to be imported.
+            else:
+                # Try to import the pool.
+                # If the pool fails to import, log and do nothing else.
+                if cmd_output_matches("/sbin/zpool import -N " + backup_pool,
+                        "cannot import"):
+                    log("Failed to import pool '" + backup_pool + "'.")
+                    
+                # We have successfully imported the pool.
+                # Start the backup.
+                else:
+                    do_backup(pool, backup_pool)
 
-        # Maybe it has already been imported?
-        if cmd_output_matches("/sbin/zpool status", "pool: " + BACKUP_POOL_NAME):
-            do_backup(LOCAL_POOL_NAME)
+def get_list_of_pools():
 
-    # The pool is eligible to be imported.
+    # Get the raw output
+    output = exec_in_shell("/sbin/zpool list")
+
+    # Throw away the first line because it is just column labels
+    output = output.split("\n")[1:-1]
+
+    # Keep only the first part of each remaining line
+    output = map(lambda x: x.split()[0], output)
+
+    return output
+
+def get_backup_pools(pool):
+
+    # Get the raw output
+    output = exec_in_shell("/sbin/zfs get zfs-auto-backup:backup-pools " + pool)
+
+    # Throw away the first line because it is just column labels
+    output = output.split("\n")[1]
+
+    # Keep only the value
+    value = output.split()[2]
+
+    if value is "-":
+        # No backup pools set. Return empty list.
+        return []
+
     else:
-        # Try to import the pool.
-        # If the pool fails to import, log and do nothing else.
-        if cmd_output_matches("/sbin/zpool import -N " + BACKUP_POOL_NAME, "cannot import"):
-            log("Failed to import pool '" + BACKUP_POOL_NAME + "'.")
-            
-        # We have successfully imported the pool.
-        # Start the backup.
-        else:
-            do_backup(LOCAL_POOL_NAME)
+        # Split on commas and return
+        return value.split(",")
 
+        
 # Check if the given dataset exists
 def dataset_exists(dataset):
     matches = cmd_output_matches("/sbin/zfs list -H -o name", "^" + dataset + "$")
@@ -75,21 +101,18 @@ def log(msg):
 
 # Pre: The backup pool has been imported.
 # Do a backup of the pool
-def do_backup(local_dataset):
+def do_backup(local_dataset, backup_pool):
     # Find out the latest local snapshot. We start at the last hourly.
-    #local_snaps = cmd_output_matches("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + local_dataset, ".*@zfs-auto-snap_hourly.*")
-    #latest_local_snap = local_snaps[0].split("@")[1]
     local_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + local_dataset)
     latest_local_snap = local_snaps.split("\n")[0].split("@")[1]
 
-    backup_destination = BACKUP_POOL_NAME + "/" + local_dataset
+    backup_destination = backup_pool + "/" + local_dataset
 
     # Make sure the destination dataset exists. If it doesn't, create it.
     if (not dataset_exists(backup_destination)):
         create_filesystem(backup_destination)
 
     # Find remote snapshots.
-    #remote_snaps = cmd_output_matches("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + backup_destination, ".*@zfs-auto-snap_hourly.*")
     remote_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + backup_destination)
 
     # If there are no remote snapshots, do a non-incremental backup.
@@ -97,25 +120,14 @@ def do_backup(local_dataset):
         # Log the fact that we are doing a non-incremental backup
         log("Starting non-incremental backup.")
 
-        # If the backup filesystem does not exist in the backup pool, create the
-        # dataset to backup to in the backup pool
-        #backup_fs = cmd_output_matches("/sbin/zfs list " + BACKUP_POOL_NAME,
-        #    "^" + BACKUP_POOL_NAME + "/" + LOCAL_POOL_NAME)
-        #if not backup_fs:
-        #    # Create the backup filesystem
-        #    print "Could not find the backup filesystem. Creating."
-        #    exec_in_shell("/sbin/zfs create " + BACKUP_POOL_NAME + "/" +
-        #        LOCAL_POOL_NAME)
-
         # Execute a non-incremental backup.
         cmd1 = "/sbin/zfs send -vR " + local_dataset + "@" + latest_local_snap
-        cmd2 = "/sbin/zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + local_dataset 
+        cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset 
         exec_pipe(cmd1, cmd2)
     
     # There are remote snapshots.
     else:
         # Get the latest remote snapshot.      
-        #latest_remote_snap = remote_snaps[0].split("@")[1]
         latest_remote_snap = remote_snaps.split("\n")[0].split("@")[1]
         
         # If the backup already has the latest snapshot
@@ -131,7 +143,7 @@ def do_backup(local_dataset):
             # Construct and execute command to send incremental backup
             cmd1 = "/sbin/zfs send -vR -I " + local_dataset + "@" + latest_remote_snap + \
                     " " + local_dataset + "@" + latest_local_snap
-            cmd2 = "/sbin/zfs receive -vFu -d " + BACKUP_POOL_NAME + "/" + local_dataset
+            cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset
             exec_pipe(cmd1, cmd2)
     export_pool()
 
@@ -139,9 +151,8 @@ def exec_in_shell(cmd):
     try:
         return subprocess.check_output(cmd.split())
     except subprocess.CalledProcessError, e:
-        print "failed on command: " + cmd
-        print "fail error: " + e.output
-        sys.exit()
+        # Non-zero exit code, but we don't really care
+        return e.output
 
 def exec_pipe(cmd1, cmd2):
     p1 = subprocess.Popen(cmd1.split(), stdout=subprocess.PIPE)
