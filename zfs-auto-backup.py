@@ -10,6 +10,12 @@ import re
 import subprocess
 import sys
 import time
+from datetime import datetime
+
+# TODO change zfs and zpool commands to use "-H" flag where possible, which is
+# described in the zfs man page as:
+# "Used  for scripting mode. Do not print headers and separate fields by
+# a single tab instead of arbitrary white space."
 
 
 # Backup each pool (or don't) according to the value of its
@@ -21,9 +27,10 @@ def main():
         for backup_pool in backup_pools:
             if import_pool(backup_pool):
                 do_backup(pool, backup_pool)
+                export_pool(backup_pool)
 
-# Returns true if the pool is accessible (i.e., it was already imported or it
-# has just now been successfully imported), false otherwise
+# Returns True if the pool is accessible (i.e., it was already imported or it
+# has just now been successfully imported), False otherwise
 def import_pool(pool):
     ret = False
     # If the pool is ineligible to be imported
@@ -49,8 +56,24 @@ def import_pool(pool):
             ret = True
     return ret
 
-def get_list_of_pools():
+# Returns a string for the current time of the form YYYY-mm-dd-HHMM
+def get_timestamp_string():
+    return datetime.now().strftime("%Y-%m-%d-%H%M")
 
+# Given a dataset, returns the name of the latest snapshot that is of the form
+# "zfs-auto-backup-YYYY-mm-dd-HHMM"
+# If no such snapshot, returns None
+def get_latest_backed_up_zfsautobackup_snap(dataset):
+    # TODO write this function
+
+# Given a dataset, takes a new zfs-auto-backup snapshot
+# The new snapshot has the name "zfs-auto-backup-YYYY-mm-dd-HHMM" where the
+# timestamp is the current time
+# Return the name of the new snapshot, or None if it couldn't be created
+def create_zfsautobackup_snap(dataset):
+    # TODO write this function
+
+def get_list_of_pools():
     # Get the raw output
     output = exec_in_shell("/sbin/zpool list")
 
@@ -63,7 +86,6 @@ def get_list_of_pools():
     return output
 
 def get_backup_pools(pool):
-
     # Get the raw output
     output = exec_in_shell("/sbin/zfs get zfs-auto-backup:backup-pools " + pool)
 
@@ -106,9 +128,37 @@ def cmd_output_matches(cmd, string_to_match):
 def log(msg):
     print str(int(time.time())) + ": " + msg
 
+# Perform a non-incremental backup to backup_pool/local_dataset@snap
+def do_nonincremental_backup(local_dataset, snap, backup_pool):
+    # TODO write this function
+
+# Perform an incremental backup
+# From backup_pool/local_dataset@remote_snap to backup_pool/local_dataset@snap
+def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
+    # TODO write this function
+
 # Pre: The backup pool has been imported.
 # Do a backup of the pool
 def do_backup(local_dataset, backup_pool):
+    # Take a new snapshot of the local dataset
+    local_snap = create_zfsautobackup_snap(local_dataset)
+    if local_snap is None:
+        log("Unable to create snapshot on dataset %s" % local_dataset)
+    else:
+        latest_remote = get_latest_backed_up_zfsautobackup_snap(backup_pool +
+                "/" + dataset)
+        if latest_remote is None:
+            # No zfs-auto-backup snap has ever been backed up. Proceed with
+            # non-incremental backup for this dataset.
+            do_nonincremental_backup(local_dataset, local_snap, backup_pool)
+        else:
+            # Proceed with incremental backup.
+            do_incremental_backup(local_dataset, local_snap, backup_pool,
+                    latest_remote)
+
+# BEGIN STALE CODE THAT NEEDS TO BE MOVED
+def code_that_will_probably_be_useful_somewhere_else():
+
     # Find out the latest local snapshot. We start at the last hourly.
     local_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + local_dataset)
     latest_local_snap = local_snaps.split("\n")[0].split("@")[1]
