@@ -19,28 +19,35 @@ def main():
     for pool in list_of_pools:
         backup_pools = get_backup_pools(pool)
         for backup_pool in backup_pools:
-            # If the pool is ineligible to be imported
-            if not cmd_output_matches("/sbin/zpool import",
-                    "pool: " + backup_pool):
-                log("'" + backup_pool + "' is not available")
+            if import_pool(backup_pool):
+                do_backup(pool, backup_pool)
 
-                # Maybe it has already been imported?
-                if cmd_output_matches("/sbin/zpool status",
-                        "pool: " + backup_pool):
-                    do_backup(pool, backup_pool)
+# Returns true if the pool is accessible (i.e., it was already imported or it
+# has just now been successfully imported), false otherwise
+def import_pool(pool):
+    ret = False
+    # If the pool is ineligible to be imported
+    if not cmd_output_matches("/sbin/zpool import",
+            "pool: " + backup_pool):
+        log("'" + backup_pool + "' is not available for import")
 
-            # The pool is eligible to be imported.
-            else:
-                # Try to import the pool.
-                # If the pool fails to import, log and do nothing else.
-                if cmd_output_matches("/sbin/zpool import -N " + backup_pool,
-                        "cannot import"):
-                    log("Failed to import pool '" + backup_pool + "'.")
-                    
-                # We have successfully imported the pool.
-                # Start the backup.
-                else:
-                    do_backup(pool, backup_pool)
+        # Maybe it has already been imported?
+        if cmd_output_matches("/sbin/zpool status",
+                "pool: " + backup_pool):
+            ret = True
+
+    # The pool is eligible to be imported.
+    else:
+        # Try to import the pool.
+        # If the pool fails to import, log and do nothing else.
+        if cmd_output_matches("/sbin/zpool import -N " + backup_pool,
+                "cannot import"):
+            log("Failed to import pool '" + backup_pool + "'.")
+            
+        # We have successfully imported the pool.
+        else:
+            ret = True
+    return ret
 
 def get_list_of_pools():
 
@@ -85,8 +92,8 @@ def create_filesystem(fs):
     exec_in_shell("/sbin/zfs create " + fs)
 
 # Export the pool.
-def export_pool():
-    exec_in_shell("/sbin/zpool export " + BACKUP_POOL_NAME)
+def export_pool(backup_pool_name):
+    exec_in_shell("/sbin/zpool export " + backup_pool_name)
 
 # Execute the command in the shell and get the output.
 # Find and return all occurrences of the search string in the output.
@@ -145,7 +152,7 @@ def do_backup(local_dataset, backup_pool):
                     " " + local_dataset + "@" + latest_local_snap
             cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset
             exec_pipe(cmd1, cmd2)
-    export_pool()
+    export_pool(backup_pool)
 
 def exec_in_shell(cmd):
     try:
