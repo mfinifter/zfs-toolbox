@@ -59,6 +59,9 @@ def import_pool(pool):
 def get_timestamp_string():
     return datetime.now().strftime("%Y-%m-%d-%H%M")
 
+# Sets up a global name for the snapshots so they are all named the same
+snapname = "zfs-auto-backup-" + get_timestamp_string()
+
 # Given a dataset, returns the name of the latest snapshot that is of the form
 # "zfs-auto-backup-YYYY-mm-dd-HHMM"
 # If no such snapshot, returns None
@@ -75,7 +78,6 @@ def get_latest_backed_up_zfsautobackup_snap(dataset):
 # timestamp is the current time
 # Return the name of the new snapshot, or None if it couldn't be created
 def create_zfsautobackup_snap(dataset):
-    snapname = "zfs-auto-backup-" + get_timestamp_string()
     cmd = "/sbin/zfs snapshot " + dataset + "@" + snapname
     if cmd_output_matches(cmd, "cannot create snapshot"):
         return None
