@@ -149,6 +149,8 @@ def do_nonincremental_backup(local_dataset, snap, backup_pool):
     # Execute a non-incremental backup.
     cmd1 = "/sbin/zfs send -v " + local_dataset + "@" + snap
     cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset 
+    # FIXME bug with "/local_dataset" ??
+    # -  it backed up tank/new-photos to backup_portable/tank/new-photos/new-photos
     exec_pipe(cmd1, cmd2)
 
 # Perform an incremental backup
