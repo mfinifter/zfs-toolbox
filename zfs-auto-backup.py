@@ -139,12 +139,24 @@ def log(msg):
 
 # Perform a non-incremental backup to backup_pool/local_dataset@snap
 def do_nonincremental_backup(local_dataset, snap, backup_pool):
-    # TODO write this function
+    # Log the fact that we are doing a non-incremental backup
+    log("Starting non-incremental backup.")
+
+    # Execute a non-incremental backup.
+    cmd1 = "/sbin/zfs send -v " + local_dataset + "@" + snap
+    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset 
+    exec_pipe(cmd1, cmd2)
 
 # Perform an incremental backup
 # From backup_pool/local_dataset@remote_snap to backup_pool/local_dataset@snap
 def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
-    # TODO write this function
+    log("Starting incremental backup from '%s' to '%s'." % (remote_snap, snap))
+
+    # Construct and execute command to send incremental backup
+    cmd1 = "/sbin/zfs send -v -I " + local_dataset + "@" + remote_snap + 
+            " " + local_dataset + "@" + snap
+    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset
+    exec_pipe(cmd1, cmd2)
 
 # Pre: The backup pool has been imported.
 # Do a backup of the pool
@@ -154,8 +166,14 @@ def do_backup(local_dataset, backup_pool):
     if local_snap is None:
         log("Unable to create snapshot on dataset %s" % local_dataset)
     else:
-        latest_remote = get_latest_backed_up_zfsautobackup_snap(backup_pool +
-                "/" + dataset)
+        backup_destination = backup_pool + "/" + local_dataset
+
+        # Make sure the destination dataset exists. If it doesn't, create it.
+        if not dataset_exists(backup_destination):
+            create_filesystem(backup_destination)
+
+        latest_remote = get_latest_backed_up_zfsautobackup_snap(backup_destination)
+        
         if latest_remote is None:
             # No zfs-auto-backup snap has ever been backed up. Proceed with
             # non-incremental backup for this dataset.
@@ -167,12 +185,6 @@ def do_backup(local_dataset, backup_pool):
 
 # BEGIN STALE CODE THAT NEEDS TO BE MOVED
 def code_that_will_probably_be_useful_somewhere_else():
-
-    # Find out the latest local snapshot. We start at the last hourly.
-    local_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + local_dataset)
-    latest_local_snap = local_snaps.split("\n")[0].split("@")[1]
-
-    backup_destination = backup_pool + "/" + local_dataset
 
     # Make sure the destination dataset exists. If it doesn't, create it.
     if (not dataset_exists(backup_destination)):
