@@ -18,15 +18,15 @@ from datetime import datetime
 # a single tab instead of arbitrary white space."
 
 
-# Backup each pool (or don't) according to the value of its
+# Backup each dataset (or don't) according to the value of its
 # "zfs-auto-backup:backup-pools" property
 def main():
-    list_of_pools = get_list_of_pools()
-    for pool in list_of_pools:
-        backup_pools = get_backup_pools(pool)
+    list_of_datasets = get_list_of_datasets()
+    for dataset in list_of_datasets:
+        backup_pools = get_backup_pools(dataset)
         for backup_pool in backup_pools:
             if import_pool(backup_pool):
-                do_backup(pool, backup_pool)
+                do_backup(dataset, backup_pool)
                 export_pool(backup_pool)
 
 # Returns True if the pool is accessible (i.e., it was already imported or it
@@ -35,21 +35,20 @@ def import_pool(pool):
     ret = False
     # If the pool is ineligible to be imported
     if not cmd_output_matches("/sbin/zpool import",
-            "pool: " + backup_pool):
-        log("'" + backup_pool + "' is not available for import")
+            "pool: " + pool):
+        log("'" + pool + "' is not available for import")
 
         # Maybe it has already been imported?
-        if cmd_output_matches("/sbin/zpool status",
-                "pool: " + backup_pool):
+        if cmd_output_matches("/sbin/zpool status", "pool: " + pool):
             ret = True
 
     # The pool is eligible to be imported.
     else:
         # Try to import the pool.
         # If the pool fails to import, log and do nothing else.
-        if cmd_output_matches("/sbin/zpool import -N " + backup_pool,
+        if cmd_output_matches("/sbin/zpool import -N " + pool,
                 "cannot import"):
-            log("Failed to import pool '" + backup_pool + "'.")
+            log("Failed to import pool '" + pool + "'.")
             
         # We have successfully imported the pool.
         else:
@@ -82,6 +81,11 @@ def create_zfsautobackup_snap(dataset):
         return None
     return snapname
 
+def get_list_of_datasets():
+    output = exec_in_shell("/sbin/zfs list -H -o name")
+    return output.split("\n")
+    #FIXME there is an issue here with datasets that have a space in them
+
 def get_list_of_pools():
     # Get the raw output
     output = exec_in_shell("/sbin/zpool list")
@@ -94,9 +98,9 @@ def get_list_of_pools():
 
     return output
 
-def get_backup_pools(pool):
+def get_backup_pools(dataset):
     # Get the raw output
-    output = exec_in_shell("/sbin/zfs get zfs-auto-backup:backup-pools " + pool)
+    output = exec_in_shell("/sbin/zfs get zfs-auto-backup:backup-pools " + dataset)
 
     # Throw away the first line because it is just column labels
     output = output.split("\n")[1]
@@ -153,8 +157,8 @@ def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
     log("Starting incremental backup from '%s' to '%s'." % (remote_snap, snap))
 
     # Construct and execute command to send incremental backup
-    cmd1 = "/sbin/zfs send -v -I " + local_dataset + "@" + remote_snap + 
-            " " + local_dataset + "@" + snap
+    cmd1 = "/sbin/zfs send -v -I " + local_dataset + "@" + remote_snap + " " + \
+            local_dataset + "@" + snap
     cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset
     exec_pipe(cmd1, cmd2)
 
