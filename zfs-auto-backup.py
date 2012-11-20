@@ -76,7 +76,11 @@ def get_latest_backed_up_zfsautobackup_snap(dataset):
 # timestamp is the current time
 # Return the name of the new snapshot, or None if it couldn't be created
 def create_zfsautobackup_snap(dataset):
-    # TODO write this function
+    snapname = "zfs-auto-backup-" + get_timestamp_string()
+    cmd = "/sbin/zfs snapshot " + dataset + "@" + snapname
+    if cmd_output_matches(cmd, "cannot create snapshot"):
+        return None
+    return snapname
 
 def get_list_of_pools():
     # Get the raw output
