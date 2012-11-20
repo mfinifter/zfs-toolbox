@@ -64,7 +64,12 @@ def get_timestamp_string():
 # "zfs-auto-backup-YYYY-mm-dd-HHMM"
 # If no such snapshot, returns None
 def get_latest_backed_up_zfsautobackup_snap(dataset):
-    # TODO write this function
+    regex = dataset + r"@(zfs-auto-backup-\d\d\d\d-\d\d-\d\d-\d\d\d\d)"
+    cmd = "/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + dataset
+    matches = cmd_output_matches(cmd, regex)
+    if len(matches) is 0:
+        return None
+    return matches[0].group(1)
 
 # Given a dataset, takes a new zfs-auto-backup snapshot
 # The new snapshot has the name "zfs-auto-backup-YYYY-mm-dd-HHMM" where the
