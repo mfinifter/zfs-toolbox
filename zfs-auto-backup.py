@@ -9,14 +9,7 @@
 import re
 import subprocess
 import sys
-import time
 from datetime import datetime
-
-# TODO change zfs and zpool commands to use "-H" flag where possible, which is
-# described in the zfs man page as:
-# "Used  for scripting mode. Do not print headers and separate fields by
-# a single tab instead of arbitrary white space."
-
 
 # Backup each dataset (or don't) according to the value of its
 # "zfs-auto-backup:backup-pools" property
@@ -86,38 +79,16 @@ def create_zfsautobackup_snap(dataset):
 def get_list_of_datasets():
     output = exec_in_shell("/sbin/zfs list -H -o name")
     return output.split("\n")
-    #FIXME there is an issue here with datasets that have a space in them
-
-def get_list_of_pools():
-    # Get the raw output
-    output = exec_in_shell("/sbin/zpool list")
-
-    # Throw away the first line because it is just column labels
-    output = output.split("\n")[1:-1]
-
-    # Keep only the first part of each remaining line
-    output = map(lambda x: x.split()[0], output)
-
-    return output
 
 def get_backup_pools(dataset):
-    # Get the raw output
-    output = exec_in_shell("/sbin/zfs get zfs-auto-backup:backup-pools " + dataset)
-
-    # Throw away the first line because it is just column labels
-    output = output.split("\n")[1]
-
-    # Keep only the value
-    value = output.split()[2]
+    output = exec_in_shell("/sbin/zfs get -H -o value zfs-auto-backup:backup-pools " + dataset).strip()
 
     if value is "-":
         # No backup pools set. Return empty list.
         return []
-
     else:
         # Split on commas and return
         return value.split(",")
-
         
 # Check if the given dataset exists
 def dataset_exists(dataset):
@@ -141,7 +112,7 @@ def cmd_output_matches(cmd, string_to_match):
 
 # Print a timestamped log message.
 def log(msg):
-    print str(int(time.time())) + ": " + msg
+    print get_timestamp_string() + ": " + msg
 
 # Strip off the last element of the path.
 # Also add a slash at the front if the path is non-empty.
@@ -205,6 +176,7 @@ def do_backup(local_dataset, backup_pool):
             do_incremental_backup(local_dataset, local_snap, backup_pool,
                     latest_remote)
 
+# Execute a command in the shell. Disregard exit code. Return output.
 def exec_in_shell(cmd):
     try:
         return subprocess.check_output(cmd.split())
@@ -212,6 +184,7 @@ def exec_in_shell(cmd):
         # Non-zero exit code, but we don't really care
         return e.output
 
+# Execute a pipe in the shell.
 def exec_pipe(cmd1, cmd2):
     p1 = subprocess.Popen(cmd1.split(), stdout=subprocess.PIPE)
     p2 = subprocess.Popen(cmd2.split(), stdin=p1.stdout, stdout=subprocess.PIPE)
