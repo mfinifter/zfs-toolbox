@@ -66,12 +66,12 @@ snapname = "zfs-auto-backup-" + get_timestamp_string()
 # "zfs-auto-backup-YYYY-mm-dd-HHMM"
 # If no such snapshot, returns None
 def get_latest_backed_up_zfsautobackup_snap(dataset):
-    regex = dataset + r"@(zfs-auto-backup-\d\d\d\d-\d\d-\d\d-\d\d\d\d)"
+    regex = dataset + r"zfs-auto-backup-\d\d\d\d-\d\d-\d\d-\d\d\d\d"
     cmd = "/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + dataset
     matches = cmd_output_matches(cmd, regex)
     if len(matches) is 0:
         return None
-    return matches[0].group(1)
+    return matches[0]
 
 # Given a dataset, takes a new zfs-auto-backup snapshot
 # The new snapshot has the name "zfs-auto-backup-YYYY-mm-dd-HHMM" where the
@@ -143,16 +143,27 @@ def cmd_output_matches(cmd, string_to_match):
 def log(msg):
     print str(int(time.time())) + ": " + msg
 
+# Strip off the last element of the path.
+# Also add a slash at the front if the path is non-empty.
+# E.g., "foo/bar/baz" becomes "/foo/bar"
+def strip_last_path_element(path):
+    stripped = ''
+    last_slash = path.rfind('/')
+    if last_slash is not -1:
+        stripped = '/' + path[0:last_slash]
+    return stripped
+
 # Perform a non-incremental backup to backup_pool/local_dataset@snap
 def do_nonincremental_backup(local_dataset, snap, backup_pool):
     # Log the fact that we are doing a non-incremental backup
     log("Starting non-incremental backup.")
 
+    # For the zfs receive, we need to strip off the last part of the path  
+    local_dataset_stripped = strip_last_path_element(local_dataset)
+
     # Execute a non-incremental backup.
     cmd1 = "/sbin/zfs send -v " + local_dataset + "@" + snap
-    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset 
-    # FIXME bug with "/local_dataset" ??
-    # -  it backed up tank/new-photos to backup_portable/tank/new-photos/new-photos
+    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + local_dataset_stripped
     exec_pipe(cmd1, cmd2)
 
 # Perform an incremental backup
@@ -160,10 +171,13 @@ def do_nonincremental_backup(local_dataset, snap, backup_pool):
 def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
     log("Starting incremental backup from '%s' to '%s'." % (remote_snap, snap))
 
+    # For the zfs receive, we need to strip off the last part of the path  
+    local_dataset_stripped = strip_last_path_element(local_dataset)
+
     # Construct and execute command to send incremental backup
     cmd1 = "/sbin/zfs send -v -I " + local_dataset + "@" + remote_snap + " " + \
             local_dataset + "@" + snap
-    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset
+    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + local_dataset_stripped
     exec_pipe(cmd1, cmd2)
 
 # Pre: The backup pool has been imported.
