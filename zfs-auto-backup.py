@@ -126,7 +126,7 @@ def dataset_exists(dataset):
 
 # Create the given filesystem
 def create_filesystem(fs):
-    exec_in_shell("/sbin/zfs create " + fs)
+    exec_in_shell("/sbin/zfs create -p " + fs)
 
 # Export the pool.
 def export_pool(backup_pool_name):
@@ -190,48 +190,6 @@ def do_backup(local_dataset, backup_pool):
             # Proceed with incremental backup.
             do_incremental_backup(local_dataset, local_snap, backup_pool,
                     latest_remote)
-
-# BEGIN STALE CODE THAT NEEDS TO BE MOVED
-def code_that_will_probably_be_useful_somewhere_else():
-
-    # Make sure the destination dataset exists. If it doesn't, create it.
-    if (not dataset_exists(backup_destination)):
-        create_filesystem(backup_destination)
-
-    # Find remote snapshots.
-    remote_snaps = exec_in_shell("/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + backup_destination)
-
-    # If there are no remote snapshots, do a non-incremental backup.
-    if not remote_snaps:
-        # Log the fact that we are doing a non-incremental backup
-        log("Starting non-incremental backup.")
-
-        # Execute a non-incremental backup.
-        cmd1 = "/sbin/zfs send -vR " + local_dataset + "@" + latest_local_snap
-        cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset 
-        exec_pipe(cmd1, cmd2)
-    
-    # There are remote snapshots.
-    else:
-        # Get the latest remote snapshot.      
-        latest_remote_snap = remote_snaps.split("\n")[0].split("@")[1]
-        
-        # If the backup already has the latest snapshot
-        if latest_remote_snap == latest_local_snap:
-            log("Nothing to do.  Backup pool already has latest snapshot '" + latest_remote_snap + "'.")
-        
-        # Backup pool does not have the latest local snapshot
-        else:
-            # Log that we are starting incremental backup
-            log("Starting incremental backup from '" + latest_remote_snap
-                    + "' to '" + latest_local_snap + "'.")
-
-            # Construct and execute command to send incremental backup
-            cmd1 = "/sbin/zfs send -vR -I " + local_dataset + "@" + latest_remote_snap + \
-                    " " + local_dataset + "@" + latest_local_snap
-            cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + "/" + local_dataset
-            exec_pipe(cmd1, cmd2)
-    export_pool(backup_pool)
 
 def exec_in_shell(cmd):
     try:
