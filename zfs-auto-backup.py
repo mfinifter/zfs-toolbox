@@ -114,22 +114,22 @@ def cmd_output_matches(cmd, string_to_match):
 def log(msg):
     print get_timestamp_string() + ": " + msg
 
-# Strip off the last element of the path, unless there is only one element.
-# E.g., "foo/bar/baz" becomes "foo/bar" and "tank" becomes "tank"
-def strip_last_path_element(path):
-    last_slash = path.rfind('/')
-    if last_slash is -1:
+# Strip off all but the first element of the path.
+# E.g., "foo/bar/baz" becomes "foo" and "tank" becomes "tank"
+def strip_all_but_first_path_element(path):
+    first_slash = path.find('/')
+    if first_slash is -1:
         return path
     else:
-        return path[0:last_slash]
+        return path[0:first_slash]
 
 # Perform a non-incremental backup to backup_pool/local_dataset@snap
 def do_nonincremental_backup(local_dataset, snap, backup_pool):
     # Log the fact that we are doing a non-incremental backup
     log("Starting non-incremental backup.")
 
-    # For the zfs receive, we need to strip off the last part of the path  
-    local_dataset_stripped = strip_last_path_element(local_dataset)
+    # For the zfs receive, we need to strip off all but the first part of the path  
+    local_dataset_stripped = strip_all_but_first_path_element(local_dataset)
 
     # Execute a non-incremental backup.
     cmd1 = "/sbin/zfs send -v " + local_dataset + "@" + snap
@@ -141,8 +141,8 @@ def do_nonincremental_backup(local_dataset, snap, backup_pool):
 def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
     log("Starting incremental backup from '%s' to '%s'." % (remote_snap, snap))
 
-    # For the zfs receive, we need to strip off the last part of the path  
-    local_dataset_stripped = strip_last_path_element(local_dataset)
+    # For the zfs receive, we need to strip off all but the first part of the path  
+    local_dataset_stripped = strip_all_but_first_path_element(local_dataset)
 
     # Construct and execute command to send incremental backup
     cmd1 = "/sbin/zfs send -v -I " + local_dataset + "@" + remote_snap + " " + \
