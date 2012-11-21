@@ -83,12 +83,12 @@ def get_list_of_datasets():
 def get_backup_pools(dataset):
     output = exec_in_shell("/sbin/zfs get -H -o value zfs-auto-backup:backup-pools " + dataset).strip()
 
-    if value is "-":
+    if output is "-":
         # No backup pools set. Return empty list.
         return []
     else:
         # Split on commas and return
-        return value.split(",")
+        return output.split(",")
         
 # Check if the given dataset exists
 def dataset_exists(dataset):
@@ -114,15 +114,14 @@ def cmd_output_matches(cmd, string_to_match):
 def log(msg):
     print get_timestamp_string() + ": " + msg
 
-# Strip off the last element of the path.
-# Also add a slash at the front if the path is non-empty.
-# E.g., "foo/bar/baz" becomes "/foo/bar"
+# Strip off the last element of the path, unless there is only one element.
+# E.g., "foo/bar/baz" becomes "foo/bar" and "tank" becomes "tank"
 def strip_last_path_element(path):
-    stripped = ''
     last_slash = path.rfind('/')
-    if last_slash is not -1:
-        stripped = '/' + path[0:last_slash]
-    return stripped
+    if last_slash is -1:
+        return path
+    else:
+        return path[0:last_slash]
 
 # Perform a non-incremental backup to backup_pool/local_dataset@snap
 def do_nonincremental_backup(local_dataset, snap, backup_pool):
@@ -134,7 +133,7 @@ def do_nonincremental_backup(local_dataset, snap, backup_pool):
 
     # Execute a non-incremental backup.
     cmd1 = "/sbin/zfs send -v " + local_dataset + "@" + snap
-    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + local_dataset_stripped
+    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + '/' + local_dataset_stripped
     exec_pipe(cmd1, cmd2)
 
 # Perform an incremental backup
@@ -148,7 +147,7 @@ def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
     # Construct and execute command to send incremental backup
     cmd1 = "/sbin/zfs send -v -I " + local_dataset + "@" + remote_snap + " " + \
             local_dataset + "@" + snap
-    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + local_dataset_stripped
+    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + '/' + local_dataset_stripped
     exec_pipe(cmd1, cmd2)
 
 # Pre: The backup pool has been imported.
