@@ -126,7 +126,7 @@ def strip_all_but_first_path_element(path):
 # Perform a non-incremental backup to backup_pool/local_dataset@snap
 def do_nonincremental_backup(local_dataset, snap, backup_pool):
     # Log the fact that we are doing a non-incremental backup
-    log("Starting non-incremental backup.")
+    log("Starting non-incremental backup from %s@%s to %s." % (local_dataset, snap, backup_pool))
 
     # For the zfs receive, we need to strip off all but the first part of the path  
     local_dataset_stripped = strip_all_but_first_path_element(local_dataset)
@@ -134,12 +134,13 @@ def do_nonincremental_backup(local_dataset, snap, backup_pool):
     # Execute a non-incremental backup.
     cmd1 = "/sbin/zfs send -v " + local_dataset + "@" + snap
     cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + '/' + local_dataset_stripped
+    log("Executing: '%s | %s'." % (cmd1, cmd2))
     exec_pipe(cmd1, cmd2)
 
 # Perform an incremental backup
 # From backup_pool/local_dataset@remote_snap to backup_pool/local_dataset@snap
 def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
-    log("Starting incremental backup from '%s' to '%s'." % (remote_snap, snap))
+    log("Starting incremental backup of %s to %s from @%s to @%s ." % (local_dataset, backup_pool, remote_snap, snap))
 
     # For the zfs receive, we need to strip off all but the first part of the path  
     local_dataset_stripped = strip_all_but_first_path_element(local_dataset)
@@ -148,6 +149,7 @@ def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
     cmd1 = "/sbin/zfs send -v -I " + local_dataset + "@" + remote_snap + " " + \
             local_dataset + "@" + snap
     cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + '/' + local_dataset_stripped
+    log("Executing: '%s | %s'." % (cmd1, cmd2))
     exec_pipe(cmd1, cmd2)
 
 # Pre: The backup pool has been imported.
