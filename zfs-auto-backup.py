@@ -78,7 +78,7 @@ def create_zfsautobackup_snap(dataset):
 
 def get_list_of_datasets():
     output = exec_in_shell("/sbin/zfs list -H -o name")
-    return output.split("\n")
+    return output.strip().split("\n")
 
 def get_backup_pools(dataset):
     output = exec_in_shell("/sbin/zfs get -H -o value zfs-auto-backup:backup-pools " + dataset).strip()
