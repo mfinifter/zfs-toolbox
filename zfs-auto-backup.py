@@ -29,8 +29,6 @@ def import_pool(pool):
     # If the pool is ineligible to be imported
     if not cmd_output_matches("/sbin/zpool import",
             "pool: " + pool):
-        log("'" + pool + "' is not available for import")
-
         # Maybe it has already been imported?
         if cmd_output_matches("/sbin/zpool status", "pool: " + pool):
             ret = True
@@ -112,7 +110,7 @@ def cmd_output_matches(cmd, string_to_match):
 
 # Print a timestamped log message.
 def log(msg):
-    print get_timestamp_string() + ": " + msg
+    print "    " + get_timestamp_string() + ": " + msg
 
 # Strip off all but the first element of the path.
 # E.g., "foo/bar/baz" becomes "foo" and "tank" becomes "tank"
