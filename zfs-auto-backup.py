@@ -6,14 +6,24 @@
 #  To Public License, Version 2, as published by Sam Hocevar. See
 #  http://sam.zoy.org/wtfpl/COPYING for more details.
 
+from datetime import datetime
+
+import argparse
 import re
 import subprocess
 import sys
-from datetime import datetime
 
 # Backup each dataset (or don't) according to the value of its
 # "zfs-auto-backup:backup-pools" property
 def main():
+    global VERBOSE, DRY_RUN
+    parser = argparse.ArgumentParser(description='Automatically backup each zfs filesystem to the pool(s) specified in its "zfs-auto-backup:backup-pools" property.')
+    parser.add_argument('--verbose', help="print lots of log messages", default=False, action='store_true')
+    parser.add_argument('--dry-run', help="don't actually perform any of the constructive/destructive operations", default=False, action='store_true')
+    args = vars(parser.parse_args())
+    VERBOSE = args['verbose']
+    DRY_RUN = args['dry_run']
+
     list_of_datasets = get_list_of_datasets()
     for dataset in list_of_datasets:
         backup_pools = get_backup_pools(dataset)
@@ -70,6 +80,8 @@ def get_latest_backed_up_zfsautobackup_snap(dataset):
 # Return the name of the new snapshot, or None if it couldn't be created
 def create_zfsautobackup_snap(dataset):
     cmd = "/sbin/zfs snapshot " + dataset + "@" + snapname
+    if DRY_RUN:
+        return snapname
     if cmd_output_matches(cmd, "cannot create snapshot"):
         return None
     return snapname
@@ -95,7 +107,8 @@ def dataset_exists(dataset):
 
 # Create the given filesystem
 def create_filesystem(fs):
-    exec_in_shell("/sbin/zfs create -p " + fs)
+    if not DRY_RUN:
+        exec_in_shell("/sbin/zfs create -p " + fs)
 
 # Export the pool.
 def export_pool(backup_pool_name):
@@ -110,7 +123,9 @@ def cmd_output_matches(cmd, string_to_match):
 
 # Print a timestamped log message.
 def log(msg):
-    print "    " + get_timestamp_string() + ": " + msg
+    global VERBOSE
+    if VERBOSE:
+        print "    " + get_timestamp_string() + ": " + msg
 
 # Strip off all but the first element of the path.
 # E.g., "foo/bar/baz" becomes "foo" and "tank" becomes "tank"
@@ -123,6 +138,8 @@ def strip_all_but_first_path_element(path):
 
 # Perform a non-incremental backup to backup_pool/local_dataset@snap
 def do_nonincremental_backup(local_dataset, snap, backup_pool):
+    global DRY_RUN
+
     # Log the fact that we are doing a non-incremental backup
     log("Starting non-incremental backup from %s@%s to %s." % (local_dataset, snap, backup_pool))
 
@@ -133,11 +150,14 @@ def do_nonincremental_backup(local_dataset, snap, backup_pool):
     cmd1 = "/sbin/zfs send -v " + local_dataset + "@" + snap
     cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + '/' + local_dataset_stripped
     log("Executing: '%s | %s'." % (cmd1, cmd2))
-    exec_pipe(cmd1, cmd2)
+    if not DRY_RUN:
+        exec_pipe(cmd1, cmd2)
 
 # Perform an incremental backup
 # From backup_pool/local_dataset@remote_snap to backup_pool/local_dataset@snap
 def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
+    global DRY_RUN
+
     log("Starting incremental backup of %s to %s from @%s to @%s ." % (local_dataset, backup_pool, remote_snap, snap))
 
     # For the zfs receive, we need to strip off all but the first part of the path  
@@ -148,7 +168,8 @@ def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
             local_dataset + "@" + snap
     cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + '/' + local_dataset_stripped
     log("Executing: '%s | %s'." % (cmd1, cmd2))
-    exec_pipe(cmd1, cmd2)
+    if not DRY_RUN:
+        exec_pipe(cmd1, cmd2)
 
 # Pre: The backup pool has been imported.
 # Do a backup of the pool
