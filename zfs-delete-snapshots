@@ -9,6 +9,7 @@
 import argparse
 import subprocess
 import sys
+import os
 
 def main():
     parser = argparse.ArgumentParser(description='Destroy a set of snapshots, as specified by the arguments.')
@@ -27,6 +28,13 @@ def main():
     recursive = args['recursive']
     quiet = args['quiet']
     noconfirm = args['yes']
+
+    # We require you to specify -u, -r, or both.
+    if not upto and not recursive:
+        parser.print_usage()
+        print(os.path.basename(__file__) + ": error: you must specify -u, -r, or both")
+        sys.exit()
+
     
     cmd = "/sbin/zfs list -H -t snapshot -s creation -o name -d 1 " + dataset
     output = exec_in_shell(cmd)
