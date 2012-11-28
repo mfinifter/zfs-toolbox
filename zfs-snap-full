@@ -15,34 +15,33 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
-# Note that the environment variable ZFSROOT must be defined. It consists of a
-# whitespace separated list of ZFS datasets to snapshot. Each listed one will
-# have a *recursive* snapshot of it taken (so all sub-datasets will also be
-# snapshoted).
 
-USAGE="$0 [snapshot prefix]"
+USAGE="$0 filesystem [snapshot prefix]"
 DATEFORMAT="%Y-%m-%d-%H:%M"
 PREFIX=""
 
-if [ "" == "$ZFSROOT" ]; then
-	echo "The ZFSROOT environment variable must be defined for $0 to function."
-	exit 0
-fi
-
 if [[ "--help" == "$1" || "-h" == "$1" ]]; then
     echo $USAGE
-    exit
+    exit 0
 fi
 
 if [ "" != "$1" ]; then
 	PREFIX="$1"
 fi
 
+if [ 0 == $# ]; then
+    echo "You must provide at least one argument."
+    echo $USAGE
+    exit 0
+fi
+
+ZFSROOT=$1
+
+if [ 1 != $# ]; then
+    PREFIX="$2"
+fi
+
 SNAPNAME="$PREFIX`date +$DATEFORMAT`"
 echo "Taking full snapshot of $ZFSROOT@$SNAPNAME"
 
-
-for dataset in `echo "$ZFSROOT" | awk '{ for (i = 1; i <= NF; i++) print $i }'`; do
-	sudo zfs snapshot -r $dataset@$SNAPNAME
-done
+sudo zfs snapshot -r $ZFSROOT@$SNAPNAME
