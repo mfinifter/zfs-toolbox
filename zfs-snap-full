@@ -21,12 +21,18 @@
 # have a *recursive* snapshot of it taken (so all sub-datasets will also be
 # snapshoted).
 
+USAGE="$0 [snapshot prefix]"
 DATEFORMAT="%Y-%m-%d-%H:%M"
 PREFIX=""
 
 if [ "" == "$ZFSROOT" ]; then
 	echo "The ZFSROOT environment variable must be defined for $0 to function."
 	exit 0
+fi
+
+if [[ "--help" == "$1" || "-h" == "$1" ]]; then
+    echo $USAGE
+    exit
 fi
 
 if [ "" != "$1" ]; then
