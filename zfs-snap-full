@@ -1,0 +1,42 @@
+#!/bin/bash
+#
+#    Copyright 2012 Joel Weinberger
+#   
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#   
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#   
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# Note that the environment variable ZFSROOT must be defined. It consists of a
+# whitespace separated list of ZFS datasets to snapshot. Each listed one will
+# have a *recursive* snapshot of it taken (so all sub-datasets will also be
+# snapshoted).
+
+DATEFORMAT="%Y-%m-%d-%H:%M"
+PREFIX=""
+
+if [ "" == "$ZFSROOT" ]; then
+	echo "The ZFSROOT environment variable must be defined for $0 to function."
+	exit 0
+fi
+
+if [ "" != "$1" ]; then
+	PREFIX="$1"
+fi
+
+SNAPNAME="$PREFIX`date +$DATEFORMAT`"
+echo "Taking full snapshot of $ZFSROOT@$SNAPNAME"
+
+
+for dataset in `echo "$ZFSROOT" | awk '{ for (i = 1; i <= NF; i++) print $i }'`; do
+	sudo zfs snapshot -r $dataset@$SNAPNAME
+done
