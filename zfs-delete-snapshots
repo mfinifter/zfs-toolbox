@@ -12,7 +12,7 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser(description='Delete all snapshots up to and including the named snapshot.')
-    parser.add_argument('--dry-run', help="don't actually destroy anything", default=False, action='store_true')
+    parser.add_argument('-n', '--dry-run', help="don't actually destroy anything", default=False, action='store_true')
     parser.add_argument('dataset', help='the dataset')
     parser.add_argument('snapshot', help='the name of the snapshot')
     args = vars(parser.parse_args())
