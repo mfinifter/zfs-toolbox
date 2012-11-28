@@ -15,6 +15,8 @@ def main():
     parser.add_argument('-n', '--dry-run', help="don't actually destroy anything.", default=False, action='store_true')
     parser.add_argument('-u', '--upto', help="destroy all snapshots up to and including the named snapshot (and descendant snapshots, if combined with -r)", default=False, action='store_true')
     parser.add_argument('-r', '--recursive', help="destroy snapshots on all descendant datasets with the same snapshot name", default=False, action='store_true')
+    parser.add_argument('-q', '--quiet', help="don't list snapshots that are to be destroyed", default=False, action='store_true')
+    parser.add_argument('--yes', help="don't ask for confirmation before destroying", default=False, action='store_true')
     parser.add_argument('dataset', help='the dataset')
     parser.add_argument('snapshot', help='the name of the snapshot')
     args = vars(parser.parse_args())
@@ -23,6 +25,8 @@ def main():
     dry_run = args['dry_run']
     upto = args['upto']
     recursive = args['recursive']
+    quiet = args['quiet']
+    noconfirm = args['yes']
     
     cmd = "/sbin/zfs list -H -t snapshot -s creation -o name -d 1 " + dataset
     output = exec_in_shell(cmd)
