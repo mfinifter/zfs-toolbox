@@ -34,9 +34,12 @@ def main():
 
     # We require you to specify -u, -r, or both.
     if not upto and not recursive:
-        parser.print_usage()
-        print(os.path.basename(__file__) + ": error: you must specify -u, -r, or both")
-        sys.exit()
+        arg_error(parser, "you must specify -u, -r, or both")
+
+    # We have not implemented -r yet, so -r is currently required
+    # TODO after implementing -r, remove this check
+    if recursive:
+        arg_error(parser, "-r is not yet implemented")
 
     
     cmd = "/sbin/zfs list -H -t snapshot -s creation -o name -d 1 " + dataset
@@ -56,6 +59,12 @@ def main():
             print "No snapshots destroyed. Exiting."
     except ValueError:
         print "Snapshot %s@%s not found. Exiting." % (dataset, snapshot)
+
+def arg_error(parser, msg):
+    parser.print_usage()
+    print(os.path.basename(__file__) + ": error: " + msg)
+    sys.exit()
+
 
 def destroy_snapshots(snapshots, dry_run):
     print "Destroying snapshots."
