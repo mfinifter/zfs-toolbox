@@ -1,4 +1,4 @@
-zfs-auto-backup
+zfs-toolbox
 ===============
 
-Automatic backups for users of zfs on Linux.
+A ZFS toolbox for users of ZFS on Linux.
