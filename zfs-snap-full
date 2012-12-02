@@ -17,7 +17,7 @@
 #
 
 USAGE="$0 filesystem [snapshot prefix]"
-DATEFORMAT="%Y-%m-%d-%H:%M"
+DATEFORMAT="%Y-%m-%d-%H%M"
 PREFIX=""
 
 if [[ "--help" == "$1" || "-h" == "$1" ]]; then
