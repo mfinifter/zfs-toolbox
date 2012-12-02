@@ -42,54 +42,75 @@ def main():
     if not upto and not recursive:
         arg_error(parser, "you must specify -u, -r, or both")
 
-    # We have not implemented -r yet, so -r is currently required
-    # TODO after implementing -r, remove this check
-    if recursive:
-        arg_error(parser, "-r is not yet implemented")
-
     snaps_to_destroy = []
     datasets = []
 
-    # if '-r' was NOT specified, set the list of datasets to the listed one.
-    # if '-r'
+    # If '-r' was NOT specified, set the list of datasets to just the one, and
+    # add the one dataset and its snapshot to the list of snapshots to destroy.
+    #
+    # If '-r' was specified, set the list of datasets to all descendant datasets
+    # (non-snapshot) of the given dataset, and add the listed snapshot of all
+    # the descendants to the list of snapshots to destroy.
     if not recursive:
         datasets = [ dataset ]
     else:
-        pass
+        cmd = "/sbin/zfs list -H -r -o name ".split()
+        cmd.append(dataset)
+        output = exec_in_shell(cmd)
+        children = output.split('\n')
+        cmd = "/sbin/zfs list -H -r -t snapshot -o name ".split()
+        cmd.append(dataset)
+        output = exec_in_shell(cmd)
+        children_snaps = output.split('\n')
+
+        for child in children:
+            try:
+                index = children_snaps.index("%s@%s" % (child, snapshot))
+                # The prior statement will throw an exception if the snapshot
+                # doesn't exist. Thus, if we reach here, store the child as a
+                # valid dataset to visit.
+                datasets.append(child)
+            except ValueError:
+                # If such a snapshot does not exist, just move along.
+                pass
         
-
-    # If '-r' was specified, 
-
     # If '-u' was specified, for each dataset (that is the named dataset and any
     # descendants, if '-r' was specified), we need to:
     #   - Get the snapshots on the given dataset, up to the named snapshot
-    #   - List the snapshots that will be destroyed (if not '-q')
-    #   - Get interactive confirmation from the user (if not '--yes')
-    #   - Destroy the snapshots
+    #   - Concatenate those to the list of snapshots to delete
+    #   - Rinse and repeat
     if upto:
-        cmd = "/sbin/zfs list -H -t snapshot -s creation -o name -d 1 " + dataset
-        output = exec_in_shell(cmd)
-        snaps = output.split('\n')
-        try:
-            index = snaps.index("%s@%s" % (dataset, snapshot))
-            snaps_to_destroy = snaps[0:index+1]
-            msg("The following snapshots will be destroyed:")
-            for snap in snaps_to_destroy:
-                msg("    " + snap)
+        for child in datasets:
+            cmd = "/sbin/zfs list -H -t snapshot -s creation -o name -d 1".split()
+            cmd.append(child)
+            output = exec_in_shell(cmd)
+            snaps = output.split('\n')
+            try:
+                index = snaps.index("%s@%s" % (child, snapshot))
+                snaps_to_destroy.extend(snaps[0:index + 1])
+            except ValueError:
+                print("Snapshot %s@%s not found. Exiting." % (dataset, snapshot))
+    else:
+        for child in datasets:
+            snaps_to_destroy.append(child + "@" + snapshot)
 
-            choice = 'n'
-            if noconfirm:
-                choice = 'y'
-            else:
-                print "Proceed (y/n)?",
-                choice = raw_input().lower()
 
-            if choice == 'y':
-                destroy_snapshots(snaps_to_destroy, dry_run)
-            else:
-                msg("No snapshots destroyed. Exiting.")
-        except ValueError:
-            print("Snapshot %s@%s not found. Exiting." % (dataset, snapshot))
+    # List snapshots to destroy and prompt user to confirm their destruction
+    msg("The following snapshots will be destroyed:")
+    for snap in snaps_to_destroy:
+        msg("    " + snap)
+
+    choice = 'n'
+    if noconfirm:
+        choice = 'y'
+    else:
+        print("Proceed (y/n)?"),
+        choice = raw_input().lower()
+
+    if choice == 'y':
+        destroy_snapshots(snaps_to_destroy, dry_run)
+    else:
+        msg("No snapshots destroyed. Exiting.")
 
 def arg_error(parser, msg):
     parser.print_usage()
@@ -108,14 +129,16 @@ def destroy_snapshots(snapshots, dry_run):
     msg("Finished destroying snapshots. Exiting.")
 
 def destroy_snapshot(snapshot, dry_run):
-    cmd = "/sbin/zfs destroy %s" % snapshot
-    msg("Running command: %s" % cmd)
+    cmd = "/sbin/zfs destroy".split()
+    cmd.append(snapshot)
+    msg("Running command: %s" % " ".join(cmd))
     if not dry_run:
         exec_in_shell(cmd)
 
 def exec_in_shell(cmd):
     try:
-        return subprocess.check_output(cmd.split())
+        return subprocess.check_output(cmd)
+        #return subprocess.check_output(cmd.split())
     except subprocess.CalledProcessError, e:
         # Non-zero exit code, but we don't really care
         return e.output
