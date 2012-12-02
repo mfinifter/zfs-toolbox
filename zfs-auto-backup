@@ -37,18 +37,20 @@ def main():
 def import_pool(pool):
     ret = False
     # If the pool is ineligible to be imported
-    if not cmd_output_matches("/sbin/zpool import",
-            "pool: " + pool):
+    cmd = "/sbin/zpool import".split()
+    if not cmd_output_matches(cmd, "pool: " + pool):
         # Maybe it has already been imported?
-        if cmd_output_matches("/sbin/zpool status", "pool: " + pool):
+        cmd = "/sbin/zpool status".split()
+        if cmd_output_matches(cmd, "pool: " + pool):
             ret = True
 
     # The pool is eligible to be imported.
     else:
         # Try to import the pool.
         # If the pool fails to import, log and do nothing else.
-        if cmd_output_matches("/sbin/zpool import -N " + pool,
-                "cannot import"):
+        cmd = "/sbin/zpool import -N".split()
+        cmd.append(pool)
+        if cmd_output_matches(cmd, "cannot import"):
             log("Failed to import pool '" + pool + "'.")
             
         # We have successfully imported the pool.
@@ -68,7 +70,8 @@ snapname = "zfs-auto-backup-" + get_timestamp_string()
 # If no such snapshot, returns None
 def get_latest_backed_up_zfsautobackup_snap(dataset):
     regex = dataset + r"@zfs-auto-backup-\d\d\d\d-\d\d-\d\d-\d\d\d\d"
-    cmd = "/sbin/zfs list -H -t snapshot -S creation -o name -d 1 " + dataset
+    cmd = "/sbin/zfs list -H -t snapshot -S creation -o name -d 1".split()
+    cmd.append(dataset)
     matches = cmd_output_matches(cmd, regex)
     if len(matches) is 0:
         return None
@@ -79,7 +82,8 @@ def get_latest_backed_up_zfsautobackup_snap(dataset):
 # timestamp is the current time
 # Return the name of the new snapshot, or None if it couldn't be created
 def create_zfsautobackup_snap(dataset):
-    cmd = "/sbin/zfs snapshot " + dataset + "@" + snapname
+    cmd = "/sbin/zfs snapshot".split()
+    cmd.append(dataset + "@" + snapname)
     if DRY_RUN:
         return snapname
     if cmd_output_matches(cmd, "cannot create snapshot"):
@@ -87,11 +91,14 @@ def create_zfsautobackup_snap(dataset):
     return snapname
 
 def get_list_of_datasets():
-    output = exec_in_shell("/sbin/zfs list -H -o name")
+    cmd = "/sbin/zfs list -H -o name".split()
+    output = exec_in_shell(cmd)
     return output.strip().split("\n")
 
 def get_backup_pools(dataset):
-    output = exec_in_shell("/sbin/zfs get -H -o value zfs-auto-backup:backup-pools " + dataset).strip()
+    cmd = "/sbin/zfs get -H -o value zfs-auto-backup:backup-pools".split()
+    cmd.append(dataset)
+    output = exec_in_shell(cmd).strip()
 
     if output is "-":
         # No backup pools set. Return empty list.
@@ -102,17 +109,22 @@ def get_backup_pools(dataset):
         
 # Check if the given dataset exists
 def dataset_exists(dataset):
-    matches = cmd_output_matches("/sbin/zfs list -H -o name", "^" + dataset + "$")
+    cmd = "/sbin/zfs list -H -o name".split()
+    matches = cmd_output_matches(cmd, "^" + dataset + "$")
     return len(matches) > 0
 
 # Create the given filesystem
 def create_filesystem(fs):
     if not DRY_RUN:
-        exec_in_shell("/sbin/zfs create -p " + fs)
+        cmd = "/sbin/zfs create -p".split()
+        cmd.append(fs)
+        exec_in_shell(cmd)
 
 # Export the pool.
 def export_pool(backup_pool_name):
-    exec_in_shell("/sbin/zpool export " + backup_pool_name)
+    cmd = "/sbin/zpool export".split()
+    cmd.append(backup_pool_name)
+    exec_in_shell(cmd)
 
 # Execute the command in the shell and get the output.
 # Find and return all occurrences of the search string in the output.
@@ -197,9 +209,12 @@ def do_backup(local_dataset, backup_pool):
                     latest_remote)
 
 # Execute a command in the shell. Disregard exit code. Return output.
+# You must pass in an *array* of arguments to the shell. This is because if we
+# split it here, we might split arguments that have spaces in them but should be
+# single arguments.
 def exec_in_shell(cmd):
     try:
-        return subprocess.check_output(cmd.split())
+        return subprocess.check_output(cmd)
     except subprocess.CalledProcessError, e:
         # Non-zero exit code, but we don't really care
         return e.output

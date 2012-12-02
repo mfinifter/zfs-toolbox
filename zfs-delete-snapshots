@@ -135,10 +135,13 @@ def destroy_snapshot(snapshot, dry_run):
     if not dry_run:
         exec_in_shell(cmd)
 
+# Execute a command in the shell. Disregard exit code. Return output.
+# You must pass in an *array* of arguments to the shell. This is because if we
+# split it here, we might split arguments that have spaces in them but should be
+# single arguments.
 def exec_in_shell(cmd):
     try:
         return subprocess.check_output(cmd)
-        #return subprocess.check_output(cmd.split())
     except subprocess.CalledProcessError, e:
         # Non-zero exit code, but we don't really care
         return e.output
