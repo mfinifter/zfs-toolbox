@@ -18,8 +18,8 @@ import sys
 def main():
     global VERBOSE, DRY_RUN
     parser = argparse.ArgumentParser(description="Automatically backup each zfs filesystem to the pool(s) specified in the filesystem's \"zfs-auto-backup:backup-pools\" property.")
-    parser.add_argument('--verbose', help="print lots of log messages", default=False, action='store_true')
-    parser.add_argument('--dry-run', help="don't actually perform any of the constructive/destructive operations", default=False, action='store_true')
+    parser.add_argument('-v', '--verbose', help="print lots of log messages", default=False, action='store_true')
+    parser.add_argument('-n', '--dry-run', help="don't actually perform any of the constructive/destructive operations", default=False, action='store_true')
     args = vars(parser.parse_args())
     VERBOSE = args['verbose']
     DRY_RUN = args['dry_run']
@@ -159,9 +159,9 @@ def do_nonincremental_backup(local_dataset, snap, backup_pool):
     local_dataset_stripped = strip_all_but_first_path_element(local_dataset)
 
     # Execute a non-incremental backup.
-    cmd1 = "/sbin/zfs send -v ".split()
+    cmd1 = "/sbin/zfs send -v".split()
     cmd1.append(local_dataset + "@" + snap)
-    cmd2 = "/sbin/zfs receive -vFu -d ".split()
+    cmd2 = "/sbin/zfs receive -vFu -d".split()
     cmd2.append(backup_pool + "/" + local_dataset_stripped)
     log("Executing: '%s | %s'." % (" ".join(cmd1), " ".join(cmd2)))
     if not DRY_RUN:
@@ -178,10 +178,10 @@ def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
     local_dataset_stripped = strip_all_but_first_path_element(local_dataset)
 
     # Construct and execute command to send incremental backup
-    cmd1 = "/sbin/zfs send -v -I ".split()
+    cmd1 = "/sbin/zfs send -v -I".split()
     cmd1.append(local_dataset + "@" + remote_snap)
     cmd1.append(local_dataset + "@" + snap)
-    cmd2 = "/sbin/zfs receive -vFu -d ".split()
+    cmd2 = "/sbin/zfs receive -vFu -d".split()
     cmd2.append(backup_pool + "/" + local_dataset_stripped)
     log("Executing: '%s | %s'." % (" ".join(cmd1), " ".join(cmd2)))
     if not DRY_RUN:
