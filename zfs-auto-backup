@@ -159,9 +159,11 @@ def do_nonincremental_backup(local_dataset, snap, backup_pool):
     local_dataset_stripped = strip_all_but_first_path_element(local_dataset)
 
     # Execute a non-incremental backup.
-    cmd1 = "/sbin/zfs send -v " + local_dataset + "@" + snap
-    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + '/' + local_dataset_stripped
-    log("Executing: '%s | %s'." % (cmd1, cmd2))
+    cmd1 = "/sbin/zfs send -v ".split()
+    cmd1.append(local_dataset + "@" + snap)
+    cmd2 = "/sbin/zfs receive -vFu -d ".split()
+    cmd2.append(backup_pool + "/" + local_dataset_stripped)
+    log("Executing: '%s | %s'." % (" ".join(cmd1), " ".join(cmd2)))
     if not DRY_RUN:
         exec_pipe(cmd1, cmd2)
 
@@ -176,10 +178,12 @@ def do_incremental_backup(local_dataset, snap, backup_pool, remote_snap):
     local_dataset_stripped = strip_all_but_first_path_element(local_dataset)
 
     # Construct and execute command to send incremental backup
-    cmd1 = "/sbin/zfs send -v -I " + local_dataset + "@" + remote_snap + " " + \
-            local_dataset + "@" + snap
-    cmd2 = "/sbin/zfs receive -vFu -d " + backup_pool + '/' + local_dataset_stripped
-    log("Executing: '%s | %s'." % (cmd1, cmd2))
+    cmd1 = "/sbin/zfs send -v -I ".split()
+    cmd1.append(local_dataset + "@" + remote_snap)
+    cmd1.append(local_dataset + "@" + snap)
+    cmd2 = "/sbin/zfs receive -vFu -d ".split()
+    cmd2.append(backup_pool + "/" + local_dataset_stripped)
+    log("Executing: '%s | %s'." % (" ".join(cmd1), " ".join(cmd2)))
     if not DRY_RUN:
         exec_pipe(cmd1, cmd2)
 
@@ -221,8 +225,8 @@ def exec_in_shell(cmd):
 
 # Execute a pipe in the shell.
 def exec_pipe(cmd1, cmd2):
-    p1 = subprocess.Popen(cmd1.split(), stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(cmd2.split(), stdin=p1.stdout, stdout=subprocess.PIPE)
+    p1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE)
+    p2 = subprocess.Popen(cmd2, stdin=p1.stdout, stdout=subprocess.PIPE)
     p1.stdout.close()
     out, err = p2.communicate()
 
