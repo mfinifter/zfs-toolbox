@@ -47,6 +47,19 @@ def main():
     if recursive:
         arg_error(parser, "-r is not yet implemented")
 
+    snaps_to_destroy = []
+    datasets = []
+
+    # if '-r' was NOT specified, set the list of datasets to the listed one.
+    # if '-r'
+    if not recursive:
+        datasets = [ dataset ]
+    else:
+        pass
+        
+
+    # If '-r' was specified, 
+
     # If '-u' was specified, for each dataset (that is the named dataset and any
     # descendants, if '-r' was specified), we need to:
     #   - Get the snapshots on the given dataset, up to the named snapshot
