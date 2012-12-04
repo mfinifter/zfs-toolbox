@@ -200,8 +200,9 @@ def do_backup(local_dataset, backup_pool):
         # Make sure the destination dataset exists. If it doesn't, create it.
         if not dataset_exists(backup_destination):
             create_filesystem(backup_destination)
-
-        latest_remote = get_latest_backed_up_zfsautobackup_snap(backup_destination)
+            latest_remote = None
+        else:
+            latest_remote = get_latest_backed_up_zfsautobackup_snap(backup_destination)
         
         if latest_remote is None:
             # No zfs-auto-backup snap has ever been backed up. Proceed with
