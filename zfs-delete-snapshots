@@ -23,7 +23,9 @@ def main():
 
     # A group for required command argument.
     group = parser.add_argument_group('command (required)')
-    group.add_argument('-u', '--upto', help="destroy all snapshots up to and including the named snapshot (and descendant snapshots, if combined with -r)", default=False, action='store_true')
+    range_group = group.add_mutually_exclusive_group()
+    range_group.add_argument('-u', '--upto', help="destroy all snapshots up to and including the named snapshot (and descendant snapshots, if combined with -r); cannot be used with -g", default=False, action='store_true')
+    range_group.add_argument('-g', '--range', help="destroy all snapshots from dataset to the specified upper limit of the range; cannot be used with -u", default=False)
     group.add_argument('-r', '--recursive', help="destroy snapshots on all descendant datasets with the same snapshot name", default=False, action='store_true')
 
     args = vars(parser.parse_args())
@@ -31,6 +33,7 @@ def main():
     snapshot = args['snapshot']
     dry_run = args['dry_run']
     upto = args['upto']
+    snaprange = args['range']
     recursive = args['recursive']
     noconfirm = args['yes']
     quiet = args['quiet']
@@ -39,8 +42,8 @@ def main():
     QUIET = quiet
 
     # We require you to specify -u, -r, or both.
-    if not upto and not recursive:
-        arg_error(parser, "you must specify -u, -r, or both")
+    if not upto and not recursive and not snaprange:
+        arg_error(parser, "you must specify a combination of -i, -u, -r, but not -i and -u together.")
 
     snaps_to_destroy = []
     datasets = []
@@ -90,10 +93,13 @@ def main():
                 snaps_to_destroy.extend(snaps[0:index + 1])
             except ValueError:
                 print("Snapshot %s@%s not found. Exiting." % (dataset, snapshot))
+    # If '-g' was specified, for each dataset
+    elif snaprange:
+        print("--range is not yet implemented")
+        sys.exit()
     else:
         for child in datasets:
             snaps_to_destroy.append(child + "@" + snapshot)
-
 
     # List snapshots to destroy and prompt user to confirm their destruction
     msg("The following snapshots will be destroyed:")
@@ -120,7 +126,6 @@ def arg_error(parser, msg):
 def msg(message):
     if not QUIET:
         print(message)
-
 
 def destroy_snapshots(snapshots, dry_run):
     msg("Destroying snapshots.")
