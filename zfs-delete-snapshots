@@ -93,10 +93,30 @@ def main():
                 snaps_to_destroy.extend(snaps[0:index + 1])
             except ValueError:
                 print("Snapshot %s@%s not found. Exiting." % (dataset, snapshot))
-    # If '-g' was specified, for each dataset
+    # If '-g' was specified, for each dataset (that is the named dataset and any
+    # descendants, if '-r' was specified), we need to:
+    #   - Get the snapshots on the given dataset, following the named snapshot
+    #   - Prune any snapshots after the named RANGE snapshot
+    #   - If no RANGE snapshot exists, do nothing
+    #   - Concatenate all of these snapshots to the list of snapshots to delete
+    #   - Rinse and repeat
     elif snaprange:
-        print("--range is not yet implemented")
-        sys.exit()
+        for child in datasets:
+            cmd = "/sbin/zfs list -H -t snapshot -s creation -o name -d 1".split()
+            cmd.append(child)
+            output = exec_in_shell(cmd)
+            snaps = output.split('\n')
+            try:
+                startindex = snaps.index("%s@%s" % (child, snapshot))
+                try:
+                    endindex = snaps.index("%s@%s" % (child, snaprange))
+                    snaps_to_destroy.extend(snaps[startindex:endindex + 1])
+                except ValueError:
+                    # If there is no snapshot with the specified upper range, do
+                    # nothing and move on.
+                    pass
+            except ValueError:
+                print("Snapshot %s@%s not found. Exiting." % (dataset, snapshot))
     else:
         for child in datasets:
             snaps_to_destroy.append(child + "@" + snapshot)
