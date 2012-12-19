@@ -16,12 +16,12 @@ import sys
 # Backup each dataset (or don't) according to the value of its
 # "zfs-auto-backup:backup-pools" property
 def main():
-    global VERBOSE, DRY_RUN
+    global QUIET, DRY_RUN
     parser = argparse.ArgumentParser(description="Automatically backup each zfs filesystem to the pool(s) specified in the filesystem's \"zfs-auto-backup:backup-pools\" property.")
-    parser.add_argument('-v', '--verbose', help="print lots of log messages", default=False, action='store_true')
+    parser.add_argument('-q', '--quiet', help="prints fewer log messages", default=False, action='store_true')
     parser.add_argument('-n', '--dry-run', help="don't actually perform any of the constructive/destructive operations", default=False, action='store_true')
     args = vars(parser.parse_args())
-    VERBOSE = args['verbose']
+    QUIET = args['quiet']
     DRY_RUN = args['dry_run']
 
     list_of_datasets = get_list_of_datasets()
@@ -51,7 +51,7 @@ def import_pool(pool):
         cmd = "/sbin/zpool import -N".split()
         cmd.append(pool)
         if cmd_output_matches(cmd, "cannot import"):
-            log("Failed to import pool '" + pool + "'.")
+            log_err("Failed to import pool '" + pool + "'.")
             
         # We have successfully imported the pool.
         else:
@@ -135,9 +135,12 @@ def cmd_output_matches(cmd, string_to_match):
 
 # Print a timestamped log message.
 def log(msg):
-    global VERBOSE
-    if VERBOSE:
-        print "    " + get_timestamp_string() + ": " + msg
+    global QUIET
+    if not QUIET:
+        print("    " + get_timestamp_string() + ": " + msg)
+
+def log_err(msg):
+    print("    err: " + get_timestamp_string() + ": " + msg)
 
 # Strip off all but the first element of the path.
 # E.g., "foo/bar/baz" becomes "foo" and "tank" becomes "tank"
