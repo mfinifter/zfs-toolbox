@@ -28,9 +28,22 @@ def main():
     for dataset in list_of_datasets:
         backup_pools = get_backup_pools(dataset)
         for backup_pool in backup_pools:
-            if import_pool(backup_pool):
+            # Make sure that it's not requesting to backup to the pool that it
+            # resides on. That is, "foo/bar/baz" cannot backup to pool "foo".
+            if is_parent_pool(dataset, backup_pool):
+                log_err("Cannot backup '" + dataset + "' to its own parent pool '" + backup_pool + "'.")
+            elif import_pool(backup_pool):
                 do_backup(dataset, backup_pool)
                 export_pool(backup_pool)
+
+# Returns True if and only if the given pool is the pool that the given dataset
+# resides within. That is, if the dataset is "foo/bar/baz" and the the pool is
+# "foo", this will return True. If, however, the pool was "boo", this will
+# return False.
+def is_parent_pool(dataset, pool):
+    # .split('/') guarantees that we'll get back an array with at least one
+    # element, thus we can make the [0] assumption below.
+    return dataset.split('/')[0] == pool
 
 # Returns True if the pool is accessible (i.e., it was already imported or it
 # has just now been successfully imported), False otherwise
@@ -140,7 +153,7 @@ def log(msg):
         print("    " + get_timestamp_string() + ": " + msg)
 
 def log_err(msg):
-    print("    err: " + get_timestamp_string() + ": " + msg)
+    print("    " + get_timestamp_string() + ": " + msg)
 
 # Strip off all but the first element of the path.
 # E.g., "foo/bar/baz" becomes "foo" and "tank" becomes "tank"
