@@ -46,13 +46,14 @@ def main():
 
 def do_snapshot(dataset, prefix, recursive):
     snapname = prefix + get_timestamp_string()
-    print(snapname)
+    cmd = "/sbin/zfs snapshot".split()
+
     if recursive:
         log("Taking a recursive snapshot starting at '" + dataset + "' with name '" + snapname + "'.")
+        cmd.append("-r")
     else:
         log("Taking a snapshot at '" + dataset + "' with name '" + snapname + "'.")
 
-    cmd = "/sbin/zfs snapshot".split()
     cmd.append(dataset + "@" + snapname)
 
     if not DRY_RUN:
