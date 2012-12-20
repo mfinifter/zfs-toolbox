@@ -75,6 +75,10 @@ def log_err(msg):
 # Execute the command in the shell and get the output.
 # Find and return all occurrences of the search string in the output.
 def cmd_output_matches(cmd, string_to_match):
+    # TODO We ought to have a way to check for error output, not just failures.
+    # For example, if you try to snapshot a dataset that doesn't exist, the zfs
+    # command doesn't ouptut an error to stdout, it fails and sends an output
+    # message to stderr. We don't currently check stderr.
     shell_output = exec_in_shell(cmd)
     matches = re.findall(string_to_match, shell_output, re.MULTILINE)
     return matches
