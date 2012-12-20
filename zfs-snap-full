@@ -30,7 +30,7 @@ def main():
     parser.add_argument('-n', '--dry-run', help="don't actually perform any of the constructive operations", default=False, action='store_true')
     parser.add_argument('-p', '--prefix', help="prepend the given prefix to the snapshot name", default=False)
     parser.add_argument('-r', '--recursive', help="also snapshot recursively of the children of the given dataset", default=False, action='store_true')
-    parser.add_argument('dataset', help='the dataset')
+    parser.add_argument('dataset', help='the dataset(s)', nargs='*')
 
     args = vars(parser.parse_args())
     QUIET = args['quiet']
@@ -42,10 +42,11 @@ def main():
     if not prefix:
         prefix = ""
 
-    do_snapshot(dataset, prefix, recursive)
-
-def do_snapshot(dataset, prefix, recursive):
     snapname = prefix + get_timestamp_string()
+    for ds in dataset:
+        do_snapshot(ds, snapname, recursive)
+
+def do_snapshot(dataset, snapname, recursive):
     cmd = "/sbin/zfs snapshot".split()
 
     if recursive:
