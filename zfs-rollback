@@ -50,9 +50,11 @@ def main():
     output = exec_in_shell(cmd)
     children_snaps = output.split('\n')
 
+    datasets = []
+
     for child in children:
         try:
-            index = children_snaps.index("%s@%s" % (child, snapshot))
+            index = children_snaps.index("%s@%s" % (child, snapname))
             # The prior statement will throw an exception if the snapshot
             # doesn't exist. Thus, if we reach here, store the child as a
             # valid dataset to visit.
@@ -62,10 +64,24 @@ def main():
             pass
 
     for dataset in datasets:
-        do_rollback(dataset, destroy_clone, force)
+        do_rollback(dataset + "@" + snapname, destroy_clones, force)
 
 def do_rollback(dataset, destroy_clone, force):
-    pass
+    cmd = "/sbin/zfs rollback".split()
+    
+    if destroy_clone:
+        cmd.append("-R")
+    else:
+        cmd.append("-r")
+
+    if force:
+        cmd.append("-f")
+
+    cmd.append(dataset)
+
+    log("Doing a rollback to " + dataset)
+    if not DRY_RUN:
+        exec_in_shell(cmd)
 
 def do_snapshot(dataset, snapname, recursive):
     cmd = "/sbin/zfs snapshot".split()
