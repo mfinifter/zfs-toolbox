@@ -1,0 +1,121 @@
+#! /usr/bin/env python2.7
+
+
+#  Copyright 2012 Joel Weinberger
+#  
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from datetime import datetime
+
+import argparse
+import re
+import subprocess
+import sys
+
+def main():
+    global QUIET, DRY_RUN
+    parser = argparse.ArgumentParser(description="Recursively rollback to snapshots with same name.")
+    parser.add_argument('-q', '--quiet', help="prints fewer log messages", default=False, action='store_true')
+    parser.add_argument('-n', '--dry-run', help="don't actually perform any of the constructive operations", default=False, action='store_true')
+    parser.add_argument('-R', help="destroy any clones of any snapshots being destroyed (see help for 'zfs rollback -R' for more information)", default=False, action='store_true')
+    parser.add_argument('-f', help="used with -R to force unmount of any clone file systems that are to be destroyed (see help for 'zfs rollback -f' for more information)", default=False, action='store_true')
+    parser.add_argument('dataset', help='the dataset')
+    parser.add_argument('snapname', help='name of the snapshots to rollback to')
+
+    args = vars(parser.parse_args())
+    QUIET = args['quiet']
+    DRY_RUN = args['dry_run']
+    destroy_clones = args['R']
+    force = args['f']
+    dataset = args['dataset']
+    snapname = args['snapname']
+
+    cmd = "/sbin/zfs list -H -r -o name ".split()
+    cmd.append(dataset)
+    output = exec_in_shell(cmd)
+    children = output.split('\n')
+    cmd = "/sbin/zfs list -H -r -t snapshot -o name ".split()
+    cmd.append(dataset)
+    output = exec_in_shell(cmd)
+    children_snaps = output.split('\n')
+
+    for child in children:
+        try:
+            index = children_snaps.index("%s@%s" % (child, snapshot))
+            # The prior statement will throw an exception if the snapshot
+            # doesn't exist. Thus, if we reach here, store the child as a
+            # valid dataset to visit.
+            datasets.append(child)
+        except ValueError:
+            # If such a snapshot does not exist, just move along.
+            pass
+
+    for dataset in datasets:
+        do_rollback(dataset, destroy_clone, force)
+
+def do_rollback(dataset, destroy_clone, force):
+    pass
+
+def do_snapshot(dataset, snapname, recursive):
+    cmd = "/sbin/zfs snapshot".split()
+
+    if recursive:
+        log("Taking a recursive snapshot starting at '" + dataset + "' with name '" + snapname + "'.")
+        cmd.append("-r")
+    else:
+        log("Taking a snapshot at '" + dataset + "' with name '" + snapname + "'.")
+
+    cmd.append(dataset + "@" + snapname)
+
+    if not DRY_RUN:
+        if cmd_output_matches(cmd, "cannot create snapshot"):
+            log_err("There was an error creating the snapshot(s).")
+
+# Returns a string for the current time of the form YYYY-mm-dd-HHMM
+def get_timestamp_string():
+    return datetime.now().strftime("%Y-%m-%d-%H%M")
+
+# Print a timestamped log message.
+def log(msg):
+    global QUIET
+    if not QUIET:
+        print("    " + get_timestamp_string() + ": " + msg)
+
+def log_err(msg):
+    print("    " + get_timestamp_string() + ": " + msg)
+
+# Execute the command in the shell and get the output.
+# Find and return all occurrences of the search string in the output.
+def cmd_output_matches(cmd, string_to_match):
+    # TODO We ought to have a way to check for error output, not just failures.
+    # For example, if you try to snapshot a dataset that doesn't exist, the zfs
+    # command doesn't ouptut an error to stdout, it fails and sends an output
+    # message to stderr. We don't currently check stderr.
+    shell_output = exec_in_shell(cmd)
+    matches = re.findall(string_to_match, shell_output, re.MULTILINE)
+    return matches
+
+# Execute a command in the shell. Disregard exit code. Return output.
+# You must pass in an *array* of arguments to the shell. This is because if we
+# split it here, we might split arguments that have spaces in them but should be
+# single arguments.
+def exec_in_shell(cmd):
+    try:
+        return subprocess.check_output(cmd)
+    except subprocess.CalledProcessError, e:
+        # Non-zero exit code, but we don't really care
+        return e.output
+
+if __name__ == '__main__':
+    main()
