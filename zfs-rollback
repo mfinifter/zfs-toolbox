@@ -83,25 +83,6 @@ def do_rollback(dataset, destroy_clone, force):
     if not DRY_RUN:
         exec_in_shell(cmd)
 
-def do_snapshot(dataset, snapname, recursive):
-    cmd = "/sbin/zfs snapshot".split()
-
-    if recursive:
-        log("Taking a recursive snapshot starting at '" + dataset + "' with name '" + snapname + "'.")
-        cmd.append("-r")
-    else:
-        log("Taking a snapshot at '" + dataset + "' with name '" + snapname + "'.")
-
-    cmd.append(dataset + "@" + snapname)
-
-    if not DRY_RUN:
-        if cmd_output_matches(cmd, "cannot create snapshot"):
-            log_err("There was an error creating the snapshot(s).")
-
-# Returns a string for the current time of the form YYYY-mm-dd-HHMM
-def get_timestamp_string():
-    return datetime.now().strftime("%Y-%m-%d-%H%M")
-
 # Print a timestamped log message.
 def log(msg):
     global QUIET
