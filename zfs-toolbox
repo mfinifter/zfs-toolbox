@@ -16,4 +16,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-echo argument: $1
+cmd="$1"
+shift
+
+case "$cmd" in
+    auto-backup|delete-snapshots|snap-full)
+        /usr/bin/zfs-$cmd $@
+        ;;
+    *)
+        echo "Invalid command to zfs-toolbox: \"$cmd\""
+        exit 0
+        ;;
+esac
