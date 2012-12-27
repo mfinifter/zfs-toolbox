@@ -1,5 +1,3 @@
-#!/bin/bash
-#
 # Copyright 2012 Joel Weinberger
 # 
 # This program is free software: you can redistribute it and/or modify
@@ -14,17 +12,17 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
-cmd="$1"
-shift
+__ztools_complete()
+{
+    local cur prev opt
 
-case "$cmd" in
-    auto-backup|delete-snapshots|rollback|snap-full)
-        /usr/bin/zfs-$cmd $@
-        ;;
-    *)
-        echo "Invalid command to zfs-toolbox: \"$cmd\""
-        exit 0
-        ;;
-esac
+    COMPREPLY=()
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD-1]}
+
+    COMPREPLY=($( compgen -W '
+    auto-backup delete-snapshots rollback snap-full' -- $cur ) )
+}
+
+complete -F __ztools_complete ztools

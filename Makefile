@@ -1,11 +1,11 @@
 BASHCOMPDIR=/etc/bash_completion.d
-COMPSRC=zfs-toolbox.complete
-COMPFILE=zfs-toolbox
+COMPSRC=ztools.complete
+COMPFILE=ztools
 COMPDEST=$(BASHCOMPDIR)/$(COMPFILE)
 
 CMDDIR=/usr/bin
-CMDSRC=zfs-toolbox
-CMDFILE=zfs-toolbox
+CMDSRC=ztools
+CMDFILE=ztools
 CMDDEST=$(CMDDIR)/$(CMDFILE)
 
 SCRIPTSDIR=/usr/bin
