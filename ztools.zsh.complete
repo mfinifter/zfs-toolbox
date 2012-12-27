@@ -21,7 +21,7 @@ _ztools()
     local context state line
 
     _arguments \
-        "1: :(HELLOfoo bar)"
+        "1: :(auto-backup delete-snapshots rollback snap-full)"
 }
 
 _ztools
