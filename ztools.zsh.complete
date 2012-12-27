@@ -1,3 +1,5 @@
+#compdef ztools
+#
 # Copyright 2012 Joel Weinberger
 # 
 # This program is free software: you can redistribute it and/or modify
@@ -13,16 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-__ztools_complete()
+_ztools()
 {
-    local cur prev opt
+    typeset -A opt_args
+    local context state line
 
-    COMPREPLY=()
-    cur=${COMP_WORDS[COMP_CWORD]}
-    prev=${COMP_WORDS[COMP_CWORD-1]}
-
-    COMPREPLY=($( compgen -W '
-    auto-backup delete-snapshots rollback snap-full' -- $cur ) )
+    _arguments \
+        "1: :(HELLOfoo bar)"
 }
 
-complete -F __ztools_complete ztools
+_ztools
