@@ -1,7 +1,12 @@
 BASHCOMPDIR=/etc/bash_completion.d
-COMPSRC=ztools.complete
-COMPFILE=ztools
-COMPDEST=$(BASHCOMPDIR)/$(COMPFILE)
+BASHCOMPSRC=ztools.bash.complete
+BASHCOMPFILE=ztools
+BASHCOMPDEST=$(BASHCOMPDIR)/$(BASHCOMPFILE)
+
+ZSHCOMPDIR=/usr/local/share/zsh/site-functions
+ZSHCOMPSRC=ztools.zsh.complete
+ZSHCOMPFILE=_ztools
+ZSHCOMPDEST=$(ZSHCOMPDIR)/$(ZSHCOMPFILE)
 
 CMDDIR=/usr/bin
 CMDSRC=ztools
@@ -13,13 +18,15 @@ SCRIPTSSRC= zfs-auto-backup zfs-delete-snapshots zfs-rollback zfs-snap-full
 SCRIPTSDEST=$(SCRIPTSSRC:%=$(SCRIPTSDIR)/%)
 
 .PHONY: install
-install: | $(BASHCOMPDIR) $(CMDDIR)
-	cp $(COMPSRC) $(COMPDEST)
+install:
+	cp $(BASHCOMPSRC) $(BASHCOMPDEST)
+	cp $(ZSHCOMPSRC) $(ZSHCOMPDEST)
 	cp $(CMDSRC) $(CMDDEST)
 	cp $(SCRIPTSSRC) $(SCRIPTSDIR)
 
 .PHONY: uninstall
-uninstall: | $(BASHCOMPDIR) $(CMDDIR)
-	rm -f $(COMPDEST)
+uninstall:
+	rm -f $(BASHCOMPDEST)
+	rm -f $(ZSHCOMPDEST)
 	rm -f $(CMDDEST)
 	rm -f $(SCRIPTSDEST)
