@@ -9,7 +9,7 @@ CMDFILE=zfs-toolbox
 CMDDEST=$(CMDDIR)/$(CMDFILE)
 
 SCRIPTSDIR=/usr/bin
-SCRIPTSSRC= zfs-auto-backup zfs-delete-snapshots zfs-snap-full
+SCRIPTSSRC= zfs-auto-backup zfs-delete-snapshots zfs-rollback zfs-snap-full
 SCRIPTSDEST=$(SCRIPTSSRC:%=$(SCRIPTSDIR)/%)
 
 .PHONY: install

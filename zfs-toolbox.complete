@@ -22,7 +22,7 @@ __zfs_toolbox_complete()
     prev=${COMP_WORDS[COMP_CWORD-1]}
 
     COMPREPLY=($( compgen -W '
-    auto-backup delete-snapshots snap-full' -- $cur ) )
+    auto-backup delete-snapshots rollback snap-full' -- $cur ) )
 }
 
 complete -F __zfs_toolbox_complete zfs-toolbox

@@ -20,7 +20,7 @@ cmd="$1"
 shift
 
 case "$cmd" in
-    auto-backup|delete-snapshots|snap-full)
+    auto-backup|delete-snapshots|rollback|snap-full)
         /usr/bin/zfs-$cmd $@
         ;;
     *)
