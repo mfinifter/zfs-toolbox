@@ -1,3 +1,5 @@
+#!/bin/bash
+#
 # Copyright 2012 Joel Weinberger
 # 
 # This program is free software: you can redistribute it and/or modify
@@ -12,17 +14,6 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
-__zfs_toolbox_complete()
-{
-    local cur prev opt
-
-    COMPREPLY=()
-    cur=${COMP_WORDS[COMP_CWORD]}
-    prev=${COMP_WORDS[COMP_CWORD-1]}
-
-    COMPREPLY=($( compgen -W '
-    auto-backup delete-snapshots snap-full' -- $cur ) )
-}
-
-complete -F __zfs_toolbox_complete zfs-toolbox
+echo argument: $1
