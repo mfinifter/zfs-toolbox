@@ -17,8 +17,11 @@ SCRIPTSDIR=/usr/bin
 SCRIPTSSRC= zfs-auto-backup zfs-delete-snapshots zfs-rollback zfs-snap-full
 SCRIPTSDEST=$(SCRIPTSSRC:%=$(SCRIPTSDIR)/%)
 
+mkdirs:
+	echo mkdir -p $(BASHCOMPDIR) $(ZSHCOMPDIR) $(CMDDIR) $(SCRIPTSDIR)
+
 .PHONY: install
-install:
+install: mkdirs
 	cp $(BASHCOMPSRC) $(BASHCOMPDEST)
 	cp $(ZSHCOMPSRC) $(ZSHCOMPDEST)
 	cp $(CMDSRC) $(CMDDEST)
