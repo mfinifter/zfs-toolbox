@@ -83,6 +83,10 @@ def do_rollback(dataset, destroy_clone, force):
     if not DRY_RUN:
         exec_in_shell(cmd)
 
+# Returns a string for the current time of the form YYYY-mm-dd-HHMM
+def get_timestamp_string():
+    return datetime.now().strftime("%Y-%m-%d-%H%M")
+
 # Print a timestamped log message.
 def log(msg):
     global QUIET
