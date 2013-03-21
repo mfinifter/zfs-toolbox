@@ -17,7 +17,7 @@ import sys
 # "zfs-auto-backup:backup-pools" property
 def main():
     global QUIET, DRY_RUN
-    parser = argparse.ArgumentParser(description="Automatically backup each zfs filesystem to the pool(s) specified in the filesystem's \"zfs-auto-backup:backup-pools\" property.")
+    parser = argparse.ArgumentParser(description="Automatically backup each zfs filesystem to the pool(s) specified in the filesystem's \"zfs-auto-backup:backup-pools\" property (where the value '-' specifies no backup pools).")
     parser.add_argument('-q', '--quiet', help="prints fewer log messages", default=False, action='store_true')
     parser.add_argument('-n', '--dry-run', help="don't actually perform any of the constructive/destructive operations", default=False, action='store_true')
     args = vars(parser.parse_args())
